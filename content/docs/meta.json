@@ -1,0 +1,13 @@
+{
+    "title": "Documentation",
+    "pages": [
+        "index",
+        "getting-started",
+        "environment-variables",
+        "authentication",
+        "organizations",
+        "admin",
+        "project-structure",
+        "deployment"
+    ]
+}

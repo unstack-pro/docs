@@ -1,0 +1,454 @@
+---
+title: Project Structure
+description: Understanding the Unstack Pro codebase organization
+icon: FolderTree
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Project Structure
+
+**Understand the codebase so you can build your product on top.** Auth, organizations, and admin are already organized and working.
+
+<Callout type="info">
+You don't need to modify the auth system. Focus on the `/app` directory where you'll build your product features.
+</Callout>
+
+## Root Structure
+
+```
+unstack-pro-convex-edition/
+├── app/                    # Next.js App Router pages
+├── actions/                # Server actions
+├── components/             # Reusable React components
+├── config/                 # Configuration files
+├── emails/                 # Email templates (React Email)
+├── lib/                    # Utilities and core logic
+├── schemas/                # Validation schemas (Zod)
+├── styles/                 # Global styles
+├── types/                  # TypeScript type definitions
+└── ... config files
+```
+
+## App Directory (`/app`)
+
+Next.js 14+ App Router structure with all routes.
+
+### Authentication Routes
+
+```
+app/auth/
+├── layout.tsx              # Auth pages layout
+├── page.tsx                # Auth redirect/landing
+├── login/                  # Sign in pages
+│   ├── page.tsx
+│   ├── loading.tsx
+│   ├── 2fa/               # Two-factor verification
+│   └── _components/       # Login-specific components
+├── register/              # Sign up pages
+├── forgot-password/       # Password reset
+└── ...
+```
+
+### Account Routes
+
+```
+app/account/
+├── layout.tsx              # Account layout with sidebar
+├── page.tsx                # Account dashboard
+├── settings/               # Profile settings
+├── security/               # Security settings
+│   ├── page.tsx           # Security overview
+│   ├── sessions/          # Session management
+│   ├── two-factor/        # 2FA configuration
+│   ├── passkeys/          # Passkey management
+│   └── audit/             # Security audit log
+├── connections/            # OAuth account linking
+├── invitations/            # Organization invites
+└── delete/                 # Account deletion
+```
+
+### Organization Routes
+
+```
+app/organizations/
+├── layout.tsx              # Org layout
+├── page.tsx                # Org list
+└── [organizationSlug]/     # Dynamic org routes
+    ├── page.tsx            # Org dashboard
+    ├── members/            # Member management
+    ├── invitations/        # Invite management
+    ├── teams/              # Team management
+    ├── roles/              # Custom roles
+    ├── settings/           # Org settings
+    └── billing/            # Billing (optional)
+```
+
+### Admin Routes
+
+```
+app/admin/
+├── page.tsx                # Admin dashboard
+├── loading.tsx             # Loading state
+└── _components/            # Admin-specific components
+    ├── users-table.tsx
+    ├── ban-user-dialog.tsx
+    └── ...
+```
+
+### API Routes
+
+```
+app/api/
+└── auth/
+    └── [...all]/
+        └── route.ts        # Better Auth API handler
+```
+
+## Actions Directory (`/actions`)
+
+Server actions for server-side operations.
+
+```
+actions/
+├── get-backup-codes.ts     # 2FA backup code retrieval
+├── update-profile-picture.ts
+└── ...
+```
+
+<Callout type="info">
+Server actions provide type-safe server-side functions callable from client components.
+</Callout>
+
+## Components Directory (`/components`)
+
+Reusable React components organized by category.
+
+### Auth Components
+
+```
+components/auth/
+├── change-password-form.tsx
+├── controlled-email-input.tsx
+├── controlled-password-input.tsx
+├── logout-button.tsx
+├── otp-input.tsx
+├── password-input.tsx
+├── profile-picture-uploader.tsx
+├── profile-sidebar.tsx
+└── ...
+```
+
+### Organization Components
+
+```
+components/organization/
+├── add-member-card.tsx
+├── add-member-form.tsx
+├── create-organization-dialog.tsx
+├── invite-member-dialog.tsx
+├── organization-selector.tsx
+├── organization-sidebar.tsx
+├── team-card.tsx
+└── ...
+```
+
+### UI Components
+
+```
+components/ui/
+├── button.tsx
+├── card.tsx
+├── dialog.tsx
+├── input.tsx
+├── table.tsx
+├── dropdown-menu.tsx
+└── ...                     # Shadcn/ui components
+```
+
+## Config Directory (`/config`)
+
+Application configuration files.
+
+```
+config/
+├── site.ts                 # Site metadata and constants
+└── fonts.ts                # Font configuration
+```
+
+## Emails Directory (`/emails`)
+
+React Email templates for transactional emails.
+
+```
+emails/
+├── verification-email.tsx
+├── reset-password-email.tsx
+├── signin-otp-email.tsx
+├── organization-invitation-email.tsx
+├── email-change-verification.tsx
+└── delete-account-verification.tsx
+```
+
+<Callout type="info">
+React Email lets you write email templates in React with great previews.
+</Callout>
+
+## Lib Directory (`/lib`)
+
+Core application logic and utilities.
+
+### Authentication
+
+```
+lib/
+├── auth-client.ts          # Better Auth client config
+├── auth-server.ts          # Better Auth server config
+├── auth-helpers.ts         # Auth utility functions
+├── session.ts              # Session management
+└── permissions.ts          # RBAC permissions
+```
+
+### Plugins
+
+```
+lib/plugin/
+├── audit/                  # Audit logging plugin
+│   ├── client.ts
+│   ├── server.ts
+│   └── index.ts
+└── overrides/              # Custom auth overrides
+    ├── client.ts
+    ├── server.ts
+    └── index.ts
+```
+
+### Hooks
+
+```
+lib/hooks/
+├── use-debounced-save.ts   # Debounced autosave
+├── use-loading-callback.ts # Loading state management
+└── use-mobile.ts           # Mobile detection
+```
+
+### Utilities
+
+```
+lib/utils/
+├── admin.ts                # Admin-related utilities
+├── organization.ts         # Org management utilities
+├── currency.ts             # Currency formatting
+├── date.ts                 # Date formatting
+├── string.ts               # String utilities
+└── toast.ts                # Toast notifications
+```
+
+## Schemas Directory (`/schemas`)
+
+Zod validation schemas.
+
+```
+schemas/
+└── auth.ts                 # Auth form validation schemas
+```
+
+## Styles Directory (`/styles`)
+
+Global CSS and Tailwind styles.
+
+```
+styles/
+└── globals.css             # Global styles and Tailwind
+```
+
+## Types Directory (`/types`)
+
+TypeScript type definitions.
+
+```
+types/
+└── organization.ts         # Organization-related types
+```
+
+## Configuration Files
+
+### `next.config.js`
+
+Next.js configuration with Sentry integration.
+
+### `instrumentation.ts`
+
+Sentry client-side instrumentation for error tracking.
+
+### `sentry.edge.config.ts`
+
+Sentry configuration for Edge Runtime functions.
+
+### `sentry.server.config.ts`
+
+Sentry configuration for server-side error tracking.
+
+### `tailwind.config.js`
+
+Tailwind CSS configuration with custom theme.
+
+### `tsconfig.json`
+
+TypeScript configuration with path aliases.
+
+**Important aliases:**
+```json
+{
+  "@/*": "./*"              # Root import alias
+}
+```
+
+### `biome.json`
+
+Biome configuration for linting and formatting.
+
+### `package.json`
+
+Dependencies and scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome lint",
+    "format": "biome format"
+  }
+}
+```
+
+## File Conventions
+
+### Loading States
+
+`loading.tsx` files provide loading UI:
+
+```tsx
+// app/admin/loading.tsx
+export default function Loading() {
+  return <Skeleton />
+}
+```
+
+### Error Boundaries
+
+`error.tsx` files handle errors:
+
+```tsx
+// app/error.tsx
+export default function Error({ error, reset }) {
+  return <ErrorUI error={error} retry={reset} />
+}
+```
+
+### Layouts
+
+`layout.tsx` files wrap route segments:
+
+```tsx
+// app/account/layout.tsx
+export default function AccountLayout({ children }) {
+  return (
+    <div>
+      <Sidebar />
+      {children}
+    </div>
+  )
+}
+```
+
+### Component Organization
+
+**Pattern:** `_components` folders for route-specific components:
+
+```
+app/admin/
+├── page.tsx
+└── _components/            # Admin-only components
+    ├── users-table.tsx
+    └── admin-stats.tsx
+```
+
+<Callout type="info">
+Underscore prefixed folders are not treated as routes by Next.js.
+</Callout>
+
+## Key Technologies
+
+### Frontend
+
+- **Next.js 14+**: App Router, Server Components
+- **React 19**: Latest React features
+- **Tailwind CSS**: Utility-first styling
+- **Shadcn/ui**: Component library
+- **React Hook Form**: Form handling
+- **Zod**: Schema validation
+
+### Backend
+
+- **Better Auth**: Authentication framework
+- **Convex**: Realtime database
+- **Resend**: Email service
+- **React Email**: Email templates
+
+### Development
+
+- **TypeScript**: Type safety
+- **Biome**: Fast linting/formatting
+- **Sentry**: Error tracking (optional)
+
+## Adding New Features
+
+### New Route
+
+1. Create folder in `/app`
+2. Add `page.tsx`
+3. Add `layout.tsx` if needed
+4. Create `_components` for route-specific components
+
+### New Component
+
+1. Add to appropriate `/components` subfolder
+2. Export from component file
+3. Import where needed
+4. Keep reusable, not route-specific
+
+### New Action
+
+1. Create file in `/actions`
+2. Mark with `'use server'`
+3. Export async function
+4. Use from components
+
+### New Email Template
+
+1. Create in `/emails`
+2. Use React Email components
+3. Add to email sending logic
+4. Test in development
+
+## Best Practices
+
+1. **Co-location**: Keep related code together
+2. **Separation**: Separate UI from logic
+3. **Reusability**: Extract reusable components
+4. **Type Safety**: Use TypeScript everywhere
+5. **Server Components**: Default to server, client when needed
+6. **Actions**: Use server actions for mutations
+7. **Validation**: Validate all inputs with Zod
+8. **Error Handling**: Handle errors gracefully
+
+## Development Tips
+
+- Use `_components` for route-specific components
+- Keep `components/` for truly reusable components
+- Server Components are default, add `'use client'` when needed
+- Use path alias `@/` for clean imports
+- Follow existing patterns for consistency

@@ -1,0 +1,339 @@
+---
+title: Admin Panel
+description: Manage users and system administration
+icon: Shield
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Admin Panel
+
+**The admin panel is fully functional at `/admin`.** User management, banning, role assignment\u2014everything works out of the box.
+
+<Callout type="info">
+No admin setup required. Grant someone the admin role and they can access the panel immediately.
+</Callout>
+
+## Access Control
+
+### Who Can Access?
+
+Only users with the `admin` role can access the admin panel.
+
+### Setting Admin Role
+
+Admins are typically set:
+- During initial setup
+- By existing admins
+- Through direct database access (first admin)
+
+<Callout type="info">
+To create the first admin, sign up normally, then update your user role to `admin` in the database on the Convex dashboard. Select betterAuth and then the users table to edit your role.
+</Callout>
+
+## Admin Dashboard
+
+The dashboard at `/admin` shows:
+
+### System Statistics
+
+Three key metrics displayed in cards:
+
+**Total Users**
+- Count of all registered accounts
+- Includes active, banned, and admin users
+
+**Administrators** 
+- Number of users with admin role
+- Critical for access control monitoring
+
+**Banned Users**
+- Count of currently restricted accounts
+- Helps track moderation actions
+
+<Callout type="info">
+Statistics update in real-time using Convex's live queries.
+</Callout>
+
+## User Management
+
+### User Table
+
+View all users with:
+- Name and email
+- Role (user/admin)
+- Status (active/banned)
+- Join date
+- Last sign in
+- Actions menu (dropdown with all admin actions)
+
+### User Actions Menu
+
+Each user row has a dropdown menu with these actions:
+
+**Utility Actions:**
+- **Copy Email**: Copy user's email to clipboard
+- **Copy ID**: Copy user's unique ID to clipboard
+
+**Account Management:**
+- **Verify Email**: Manually verify user's email (if unverified)
+- **Set Role**: Change user role (user/admin)
+- **Change Password**: Set new password for user
+- **Revoke Sessions**: Force logout from all devices
+
+**Advanced Actions:**
+- **Impersonate User**: Login as this user (for debugging/support)
+- **Ban User**: Temporarily or permanently ban user
+- **Unban User**: Restore access to banned user
+
+## User Actions
+
+### Create User
+
+1. Click "Create User"
+2. Fill in details:
+   - Email (required)
+   - Name
+   - Password
+   - Role
+3. Click create
+4. User can sign in immediately
+
+<Callout type="info">
+Created users receive a welcome email with their account details.
+</Callout>
+
+### Change User Password
+
+1. Find user in table
+2. Click actions → "Change Password"
+3. Enter new password
+4. Confirm change
+5. User can sign in with new password
+
+<Callout type="warn">
+User won't be notified of the password change. Inform them separately.
+</Callout>
+
+### Verify Email
+
+Manually verify a user's email:
+
+1. Find user
+2. Click actions → "Verify Email"
+3. Confirm action
+4. Email marked as verified
+
+**Use when:**
+- User can't receive verification email
+- Email system issues
+- Special circumstances
+
+### Set Role
+
+Change user's role:
+
+1. Find user
+2. Click actions → "Set Role"
+3. Select role:
+   - `user` (default)
+   - `admin`
+4. Confirm change
+
+<Callout type="error">
+Be careful granting admin access. Admins have full system control.
+</Callout>
+
+### Ban User
+
+Temporarily or permanently ban a user:
+
+1. Find user
+2. Click actions → "Ban User"
+3. Enter reason (optional)
+4. Set duration or permanent
+5. Confirm ban
+
+**What Happens:**
+- User immediately logged out
+- Cannot sign in
+- Existing sessions revoked
+- Can be unbanned later
+
+**Ban Options:**
+- Temporary (specify duration)
+- Permanent
+- With reason (internal note)
+
+### Unban User
+
+Restore banned user access:
+
+1. Go to banned users tab
+2. Find user
+3. Click "Unban"
+4. Confirm action
+5. User can sign in again
+
+### Impersonate User
+
+Login as another user for debugging or support:
+
+1. Find user in table
+2. Click actions → "Impersonate User"
+3. You'll be logged in as that user
+4. See the app from their perspective
+5. Click "Stop Impersonating" to return to admin account
+
+**Use when:**
+- Debugging user-specific issues
+- Testing user permissions
+- Providing customer support
+- Verifying reported bugs
+
+<Callout type="warn">
+Impersonation logs are recorded. Use responsibly and only when necessary.
+</Callout>
+
+### Delete User
+
+Permanently delete a user account:
+
+1. Find user
+2. Click actions → "Delete User"
+3. Type user email to confirm
+4. Confirm deletion
+
+<Callout type="error">
+**This is permanent!** User data cannot be recovered. Use ban instead if temporary.
+</Callout>
+
+**What Gets Deleted:**
+- User profile
+- All sessions
+- Personal data
+- Account connections
+
+**What Remains:**
+- Organization data (if member)
+- Audit logs (anonymized)
+- System logs
+
+## Banned Users
+
+View all banned users at `/admin` → Banned tab:
+
+### Information Shown
+
+- User details
+- Ban date
+- Ban reason
+- Ban duration
+- Unban action
+
+### Managing Bans
+
+- View ban history
+- See ban reasons
+- Unban users
+- Edit ban duration
+
+## Admin Best Practices
+
+### Security
+
+1. **Limit Admins**: Only grant to trusted users
+2. **Document Actions**: Note reasons for major changes (admin actions are not automatically audited)
+3. **Regular Audits**: Review admin actions periodically
+4. **Strong Auth**: Require 2FA for admin accounts
+5. **Separate Accounts**: Use separate admin accounts if possible
+
+### User Management
+
+1. **Ban vs Delete**: Ban for temporary issues, delete only when necessary
+2. **Communication**: Inform users of major account changes
+3. **Document Bans**: Always include reason for bans
+4. **Password Changes**: Tell users when you change their password
+5. **Impersonation**: Use only for legitimate support/debugging, document usage
+6. **Verify First**: Confirm issues before taking action
+
+### Operations
+
+1. **Test Actions**: Use test accounts to verify admin features
+2. **Backup**: Ensure database backups before bulk changes
+4. **Response Plan**: Have process for security incidents
+5. **Documentation**: Keep internal docs on admin procedures
+
+## Permissions
+
+Admins can:
+
+- View all users
+- Create users
+- Edit user details
+- Change passwords
+- Verify emails
+- Set roles
+- Ban/unban users
+- Revoke sessions
+- Delete users
+- Impersonate users (for support/debugging)
+- View statistics
+- Access admin panel
+- Copy user emails and IDs
+
+## Troubleshooting
+
+**Can't Access Admin Panel?**
+- Verify you have admin role
+- Sign out and back in
+- Check URL is correct (`/admin`)
+
+**Action Not Working?**
+- Refresh the page
+- Check permissions
+- Verify target user exists
+- Check browser console for errors
+
+**User Still Signed In After Ban?**
+- Sessions take a moment to revoke
+- User may need to refresh
+- Try revoking sessions manually
+
+**Can't Find User?**
+- Use search function
+- Check spelling
+- User may be deleted
+- Try searching by email
+
+## Safety Checks
+
+Built-in protections:
+
+- Cannot delete your own account while admin
+- Cannot ban yourself
+- Confirmations for destructive actions
+- Type-to-confirm for deletions
+
+## Admin Audit
+
+**Admin actions are not currently audited.** The audit system tracks user authentication and account events, but not admin panel activities.
+
+**What is audited:**
+- User sign-ins and sign-outs
+- Password changes and resets
+- Email verification
+- Account creation and updates
+- Session management
+- Failed login attempts
+
+**What is not audited:**
+- Admin user management actions
+- Role assignments
+- User bans/unbans
+- Password changes by admins
+- User deletions
+
+<Callout type="info">
+Admin actions should be logged manually or through custom audit implementations for full accountability.
+</Callout>

@@ -1,0 +1,312 @@
+---
+title: Organizations
+description: Multi-tenant organization management system
+icon: Building
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Organizations
+
+**Multi-tenant organizations are already built and working.** Just create your first organization and start using it in your product.
+
+<Callout type="info">
+The entire organization system, roles, teams, invitations, permissions are ready to use. No extra setup required.
+</Callout>
+
+## How It Works
+
+Organizations let you group users for collaboration. Everything is pre-configured:
+
+- Has its own members with different roles
+- Can be divided into teams
+- Has organization-scoped billing through Autumn (per-seat pricing)
+- Maintains its own settings and data
+
+## Creating an Organization
+
+1. Click your profile dropdown
+2. Select "Create Organization"
+3. Enter organization name
+4. Upload logo (optional)
+5. Click create
+
+You'll be automatically added as the owner.
+
+## Organization Roles
+
+### Default Roles
+
+**Owner**
+- Full control over organization
+- Manage all settings
+- Delete organization
+- Cannot be removed
+
+**Admin**
+- Manage members and roles
+- Edit organization settings
+- Cannot delete organization
+
+**Member**
+- Basic access to organization
+- View content and collaborate
+- Cannot manage settings
+
+### Custom Roles
+
+Create custom roles at `/organizations/[slug]/roles`:
+
+1. Click "Create Role"
+2. Enter role name and description
+3. Select permissions
+4. Assign to members
+
+<Callout type="info">
+Custom roles let you fine-tune access control for your specific needs.
+</Callout>
+
+## Managing Members
+
+### Invite Members
+
+At `/organizations/[slug]/members`:
+
+1. Click "Invite Member"
+2. Enter email address
+3. Select role(s)
+4. Send invitation
+
+**Invitation Process:**
+- User receives email invitation
+- Clicks link to accept
+- Added to organization with assigned roles
+- Can decline invitation
+
+### View Members
+
+See all members at `/organizations/[slug]/members`:
+
+- Member name and email
+- Assigned roles
+- Join date
+- Actions (edit role, remove)
+
+### Edit Member Roles
+
+1. Find member in list
+2. Click edit icon
+3. Select/deselect roles
+4. Save changes
+
+### Remove Members
+
+1. Find member in list
+2. Click remove button
+3. Confirm removal
+4. Member loses access immediately
+
+<Callout type="warn">
+Removing a member doesn't delete their account, just removes them from this organization.
+</Callout>
+
+## Teams
+
+Organize members into teams for better collaboration.
+
+### Create a Team
+
+At `/organizations/[slug]/teams`:
+
+1. Click "Create Team"
+2. Enter team name
+3. Add description (optional)
+4. Click create
+
+### Add Team Members
+
+1. Go to team page
+2. Click "Add Member"
+3. Select from organization members
+4. Assign team role
+5. Add to team
+
+### Team Management
+
+Each team has its own:
+- Member list
+- Settings
+- Access control
+- Collaboration space
+
+## Organization Settings
+
+Manage settings at `/organizations/[slug]/settings`:
+
+### General Settings
+
+**Organization Name**
+- Change organization display name
+- Must be unique across your instance
+
+**Organization Logo**
+- Upload custom logo
+- Shown in navigation and profiles
+- Automatic resizing
+
+**Organization Slug**
+- URL-friendly identifier
+- Used in routes
+- Cannot be changed after creation
+
+### Danger Zone
+
+**Delete Organization**
+1. Scroll to danger zone
+2. Click "Delete Organization"
+3. Enter organization name to confirm
+4. Confirm deletion
+
+<Callout type="error">
+Deleting an organization is permanent! All data, members, and teams are removed.
+</Callout>
+
+## Member Invitations
+
+### Pending Invitations
+
+View at `/organizations/[slug]/invitations`:
+
+- See all pending invites
+- Resend invitations
+- Cancel invitations
+- View invitation status
+
+### Accepting Invitations
+
+As a user, view your invitations at `/account/invitations`:
+
+1. See all pending invites
+2. Click "Accept" to join
+3. Click "Decline" to reject
+4. Invitations highlighted when viewing
+
+## Billing
+
+Organizations use **per-seat pricing** through Autumn. Each organization gets on a Pro plan and is automatically charged per user in the org.
+
+### Current Plan
+
+- View active Pro subscription
+- See current member count
+- Check per-user pricing
+- View billing cycle and renewal
+
+### Member Management & Billing
+
+When you add members to an organization:
+- Billing automatically adjusts
+- Per-user charges apply immediately
+- No manual plan changes needed
+- Transparent pricing per member
+
+### Order History
+
+- View past invoices
+- Download receipts
+- See payment history
+- Track per-user charges
+
+<Callout type="info">
+Billing is automatic through Autumn. Organizations are charged per user on the Pro plan.
+</Callout>
+
+## Organization Switcher
+
+Switch between organizations quickly:
+
+1. Click organization name in sidebar
+2. View list of all your organizations
+3. Click to switch
+4. Or create new organization
+
+## Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/organizations` | Your organizations list |
+| `/organizations/[slug]` | Organization dashboard |
+| `/organizations/[slug]/members` | Member management |
+| `/organizations/[slug]/invitations` | Invitation management |
+| `/organizations/[slug]/teams` | Teams overview |
+| `/organizations/[slug]/teams/[id]` | Specific team |
+| `/organizations/[slug]/roles` | Custom roles |
+| `/organizations/[slug]/settings` | Organization settings |
+| `/organizations/[slug]/billing` | Billing (if enabled) |
+| `/account/invitations` | Your pending invitations |
+
+## Permissions System
+
+The RBAC (Role-Based Access Control) system controls what members can do:
+
+### Organization-Level Permissions
+
+- View organization
+- Edit organization settings
+- Manage members
+- Manage teams
+- Manage roles
+- View billing
+- Manage billing
+- Delete organization
+
+### Team-Level Permissions
+
+- View team
+- Edit team
+- Add members
+- Remove members
+- Manage team settings
+
+<Callout type="info">
+Permissions are checked on every request. Unauthorized actions return 403 Forbidden.
+</Callout>
+
+## Best Practices
+
+### For Organization Owners
+
+1. **Set Clear Roles**: Define what each role can do
+2. **Use Teams**: Organize members logically
+3. **Regular Audits**: Review members and permissions
+4. **Secure Invitations**: Only invite known email addresses
+5. **Custom Roles**: Create specific roles as needed
+
+### For Members
+
+1. **Accept Invites Promptly**: Check your email regularly
+2. **Report Issues**: Contact admins if access problems occur
+3. **Use Teams**: Collaborate within your team
+4. **Respect Permissions**: Don't attempt unauthorized actions
+
+## Troubleshooting
+
+**Can't Create Organization?**
+- Check you're signed in
+- Verify email is confirmed
+- Contact admin if restricted
+
+**Invitation Not Received?**
+- Check spam folder
+- Verify correct email was entered
+- Request resend from organization admin
+
+**Missing Permissions?**
+- Check your assigned roles
+- Contact organization admin
+- Review organization settings
+
+**Can't Switch Organizations?**
+- Verify you're a member
+- Try refreshing the page
+- Check organization still exists

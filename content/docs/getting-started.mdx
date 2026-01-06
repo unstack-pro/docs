@@ -1,0 +1,272 @@
+---
+title: Getting Started
+description: Set up Unstack Pro and get your development environment running
+icon: Rocket
+---
+
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+# Getting Started
+
+**Get up and running in 10 minutes.** Auth is already configured—you just need to connect the services.
+
+<Callout type="info">
+No auth setup required. Just connect Convex, Resend, and Autumn, then start building.
+</Callout>
+
+## What You're Setting Up
+
+You're not configuring auth—that's already done. You're just:
+1. Connecting to Convex (database)
+2. Connecting to Resend (emails - required for sign-in)
+3. Connecting to Autumn (billing - required for organizations)
+4. Setting a secret key
+
+That's it. Then you have a fully working app with auth, organizations, and admin.
+
+## Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+- **Node.js 18+**: [Download here](https://nodejs.org/)
+- **npm, pnpm, yarn, or bun**: Package manager of your choice
+- **Git**: [Download here](https://git-scm.com/)
+
+<Callout type="warn">
+Unstack Pro requires Node.js 18 or higher due to native crypto features used in authentication.
+</Callout>
+
+## Installation
+
+<Steps>
+
+<Step>
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/unstack-pro/nextjs-convex.git  # Purchasing will provide access to the private repo
+cd nextjs-convex
+```
+
+</Step>
+
+<Step>
+
+### Install Dependencies
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab value="npm">
+    ```bash
+    npm install
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm install
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash
+    yarn install
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash
+    bun install
+    ```
+  </Tab>
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Set Up Convex
+
+1. **Create a Convex account** at [convex.dev](https://convex.dev)
+
+2. **Install Convex CLI** (if not already installed):
+   ```bash
+   npm install -g convex
+   ```
+
+3. **Initialize Convex in your project**:
+   ```bash
+   npx convex dev
+   ```
+   
+   This will:
+   - Create a new Convex deployment
+   - Generate your deployment URL
+   - Start the Convex dev server
+
+4. **Note your Convex URLs** - you'll need these for environment variables:
+   - `CONVEX_DEPLOYMENT`
+   - `NEXT_PUBLIC_CONVEX_URL`
+   - `NEXT_PUBLIC_CONVEX_SITE_URL`
+
+</Step>
+
+<Step>
+
+### Configure Environment Variables
+
+1. **Copy the example environment file**:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. **Fill in your environment variables**. See the [Environment Variables](/docs/environment-variables) page for detailed explanations.
+
+   Minimum required variables:
+   ```dotenv
+   BETTER_AUTH_SECRET="your-secret-key-generate-with-openssl"
+   BETTER_AUTH_URL="http://localhost:3000"
+   CONVEX_DEPLOYMENT="your-convex-deployment"
+   NEXT_PUBLIC_CONVEX_URL="https://your-project.convex.cloud"
+   ```
+
+3. **Set up Convex environment variables**:
+   ```bash
+   npx convex env set BETTER_AUTH_SECRET "your-secret-key"
+   npx convex env set BETTER_AUTH_URL "http://localhost:3000"
+   npx convex env set RESEND_API_KEY "your-resend-key"
+   npx convex env set EMAIL_FROM "Your App <no-reply@example.com>"
+   npx convex env set AUTUMN_API_KEY "your-autumn-key"
+   ```
+
+</Step>
+
+<Step>
+
+### Generate Authentication Secret
+
+Generate a secure random secret for Better Auth:
+
+<Tabs items={['OpenSSL', 'Node.js']}>
+  <Tab value="OpenSSL">
+    ```bash
+    openssl rand -base64 32
+    ```
+  </Tab>
+  <Tab value="Node.js">
+    ```bash
+    node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+    ```
+  </Tab>
+</Tabs>
+
+Use this value for `BETTER_AUTH_SECRET` in both `.env.local` and Convex environment.
+
+</Step>
+
+<Step>
+
+### Set Up Email (Required)
+
+Email verification is required for users to sign in. You'll need a [Resend](https://resend.com) account:
+
+1. Sign up at [resend.com](https://resend.com)
+2. Get your API key
+3. Add to `.env.local` and Convex:
+   ```dotenv
+   RESEND_API_KEY="re_..."
+   EMAIL_FROM="Your App <no-reply@yourdomain.com>"
+   ```
+
+<Callout type="info">
+Email verification is required for sign-in. Without Resend configured, users cannot complete registration.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Start Development Server
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab value="npm">
+    ```bash
+    npm run dev
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm dev
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash
+    yarn dev
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash
+    bun dev
+    ```
+  </Tab>
+</Tabs>
+
+Your app should now be running at `http://localhost:3000`! 🎉
+
+</Step>
+
+</Steps>
+
+## Verify Installation
+
+After starting the development server, you should:
+
+1. **Visit the homepage**: Navigate to `http://localhost:3000`
+2. **Register an account**: Click "Register" and create a test account
+3. **Check Convex dashboard**: Log into your Convex dashboard to see data being created
+4. **Explore features**: Try logging in, creating an organization, etc.
+
+## Next Steps
+
+Now that you have Unstack Pro running locally, here are some recommended next steps:
+
+- 📖 **Learn about [Authentication](/docs/authentication)** - Understand the auth system
+- 🏢 **Explore [Organizations](/docs/organizations)** - Multi-tenant features
+- 🔧 **Review [Environment Variables](/docs/environment-variables)** - Complete configuration
+- 🏗️ **Study [Project Structure](/docs/project-structure)** - Understand the codebase
+- 🚀 **Plan [Deployment](/docs/deployment)** - Get ready for production
+
+## Common Issues
+
+### Convex Connection Issues
+
+Make sure your Convex dev server is running:
+```bash
+npx convex dev
+```
+
+### Environment Variable Not Found
+
+Double-check that:
+- `.env.local` exists in the root directory
+- All required variables are set
+- Convex environment variables are configured via `npx convex env set` or their dashboard
+
+### Authentication Errors
+
+Ensure:
+- `BETTER_AUTH_SECRET` is set in both `.env.local` and Convex
+- `BETTER_AUTH_URL` matches your development URL
+- Convex deployment is running
+
+<Callout type="warn">
+Never commit your `.env.local` file to version control. It contains sensitive secrets.
+</Callout>
+
+## Development Tips
+
+- **Hot Reload**: Changes to your code will automatically reload
+- **Convex Dashboard**: Monitor your database in real-time at [dashboard.convex.dev](https://dashboard.convex.dev)
+- **Better Auth**: Uses secure httpOnly cookies for session management
+- **Type Safety**: Full TypeScript support throughout the project
+
+Need help? Check out the other documentation pages or review the code examples in the project.

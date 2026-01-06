@@ -1,0 +1,244 @@
+---
+title: Authentication
+description: How to use Unstack Pro's authentication features
+icon: Lock
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Authentication
+
+**Authentication is already configured and working.** This guide explains how your users will use the auth system that's built into Unstack Pro.
+
+<Callout type="info">
+You don't need to set up auth. It's already done. This is a user guide for the working system.
+</Callout>
+
+## How Users Sign Up & Sign In
+
+Your users have multiple ways to access your app—all working out of the box:
+
+### Sign In Methods Available
+
+Your users can sign in with:
+
+**Email & Password**
+- Standard login at `/auth/login`
+- Familiar and straightforward
+
+**OTP (One-Time Password)**
+- Passwordless option
+- Enter email, receive code, sign in
+- Great for users who don't want passwords
+
+**Passkey**
+- Use Face ID, Touch ID, or security keys
+- Most secure and convenient
+- Set up from account settings
+
+<Callout type="info">
+All auth methods require email verification. Users must verify their email address before they can sign in.
+</Callout>
+
+## User Account Management
+
+Your users can manage their accounts at `/account/settings`:
+
+### Profile Information
+
+Manage your profile at `/account/settings`:
+
+- Update your name
+- Change email (requires re-verification)
+- Upload profile picture
+
+### Change Password
+
+At `/account/settings`:
+
+1. Enter current password
+2. Enter new password
+3. Confirm new password
+
+### Forgot Password
+
+At `/auth/forgot-password`:
+
+1. Enter your email
+2. Check your inbox for reset link
+3. Click link and set new password
+
+<Callout type="warn">
+Reset links expire after 1 hour
+</Callout>
+
+## Security Features
+
+### Password Breach Detection
+
+Unstack Pro automatically checks passwords against the **Have I Been Pwned (HIBP)** database:
+
+- Warns users if their password has been compromised in a data breach
+- Runs during registration and password changes
+- Uses k-anonymity (your password never leaves the server)
+- Encourages strong, unique passwords
+
+<Callout type="info">
+HIBP integration is automatic and requires no configuration.
+</Callout>
+
+### Two-Factor Authentication (2FA)
+
+Add an extra layer of security at `/account/security/two-factor`:
+
+**Setup:**
+1. Enable 2FA
+2. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
+3. Enter verification code
+4. Save your backup codes!
+
+**Signing In with 2FA:**
+1. Enter email/password normally
+2. Enter the 6-digit code from your authenticator app
+3. Or use a backup code if needed
+
+**Backup Codes:**
+- 10 single-use codes generated during setup
+- Download and store them safely
+- Use if you lose access to authenticator
+- Can regenerate anytime
+
+<Callout type="error">
+Keep backup codes safe! Without them, recovery requires admin help.
+</Callout>
+
+### Passkeys
+
+Set up passkeys at `/account/security/passkeys`:
+
+**Add a Passkey:**
+1. Click "Add Passkey"
+2. Name it (e.g., "iPhone", "YubiKey")
+3. Follow your device's biometric prompt
+4. Done!
+
+**Benefits:**
+- No passwords to remember
+- Phishing-resistant
+- Works with Face ID, Touch ID, Windows Hello, YubiKeys
+
+**Requirements:**
+- HTTPS in production (localhost OK for dev)
+- Modern browser
+
+### Session Management
+
+View all active sessions at `/account/security/sessions`:
+
+**What You'll See:**
+- Device/browser information
+- Location and IP address
+- Last active time
+- Current session marked
+
+**Actions:**
+- **Revoke Single Session**: Log out a specific device
+- **Revoke Other Sessions**: Log out all except current
+- **Revoke All**: Log out everywhere (including this device)
+
+<Callout type="warn">
+Suspicious activity? Revoke all sessions and change your password immediately.
+</Callout>
+
+### Audit Log
+
+View your security history at `/account/security/audit`. The audit system tracks all authentication and account activity:
+
+**Authentication Events:**
+- Successful sign-ins (login.success)
+- Failed sign-in attempts (login.fail)
+- Sign-outs (logout)
+- Session creation and deletion
+- Password changes (password.change)
+- Password reset requests (password.reset)
+
+**Account Events:**
+- Email verification (email.verify)
+- Profile updates (user.update)
+- Account creation and deletion
+- Passkey additions/removals
+- 2FA setup and changes
+
+**Security Events:**
+- Session revocations
+- Failed login attempts with IP logging
+- Account security changes
+
+<Callout type="info">
+Audit logs include IP addresses (hashed for privacy), timestamps, and detailed metadata for security monitoring.
+</Callout>
+
+## Account Connections
+
+Link social accounts at `/account/connections`:
+
+- Connect OAuth providers (if configured, we don't include any by default)
+- Sign in with any linked account
+- Unlink accounts (must keep at least one sign-in method)
+
+## Delete Account
+
+At `/account/delete`:
+
+1. Enter your password
+2. Type your email to confirm
+3. Click delete
+
+<Callout type="error">
+**This is permanent!** Your data cannot be recovered.
+</Callout>
+
+**What gets deleted:**
+- Your profile
+- All sessions
+- Organization memberships (but organization data stays)
+- Everything associated with your account
+
+## Routes
+
+| Page | URL |
+|------|-----|
+| Sign In | `/auth/login` |
+| Register | `/auth/register` |
+| Forgot Password | `/auth/forgot-password` |
+| 2FA Verification | `/auth/login/2fa` |
+| Profile Settings | `/account/settings` |
+| Security Overview | `/account/security` |
+| Sessions | `/account/security/sessions` |
+| Two-Factor Auth | `/account/security/two-factor` |
+| Passkeys | `/account/security/passkeys` |
+| Audit Log | `/account/security/audit` |
+| Connections | `/account/connections` |
+| Delete Account | `/account/delete` |
+
+## Troubleshooting
+
+**Can't Sign In?**
+- Verify your email address
+- Try password reset
+- Check caps lock and spelling
+
+**Email Not Received?**
+- Check spam folder
+- Wait a few minutes
+- Try requesting again
+
+**2FA Code Not Working?**
+- Check your device's time sync
+- Try a backup code
+- Wait for next code (30 seconds)
+
+**Passkey Won't Register?**
+- Make sure you're on HTTPS (or localhost)
+- Try a different browser
+- Check biometrics are enabled on your device
