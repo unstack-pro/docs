@@ -16,7 +16,7 @@ You don't need to set up auth. It's already done. This is a user guide for the w
 
 ## How Users Sign Up & Sign In
 
-Your users have multiple ways to access your app—all working out of the box:
+Your users have multiple ways to access your app - all working out of the box:
 
 ### Sign In Methods Available
 
@@ -65,8 +65,8 @@ At `/account/settings`:
 At `/auth/forgot-password`:
 
 1. Enter your email
-2. Check your inbox for reset link
-3. Click link and set new password
+2. Check your inbox for OTP
+3. Enter OTP and set new password
 
 <Callout type="warn">
 Reset links expire after 1 hour
@@ -92,7 +92,7 @@ HIBP integration is automatic and requires no configuration.
 Add an extra layer of security at `/account/security/two-factor`:
 
 **Setup:**
-1. Enable 2FA
+1. Enable 2FA (requires password confirmation)
 2. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
 3. Enter verification code
 4. Save your backup codes!
@@ -103,7 +103,7 @@ Add an extra layer of security at `/account/security/two-factor`:
 3. Or use a backup code if needed
 
 **Backup Codes:**
-- 10 single-use codes generated during setup
+- 12 single-use codes generated during setup
 - Download and store them safely
 - Use if you lose access to authenticator
 - Can regenerate anytime
@@ -137,8 +137,10 @@ View all active sessions at `/account/security/sessions`:
 
 **What You'll See:**
 - Device/browser information
-- Location and IP address
+- IP address
 - Last active time
+- Expires on
+- Created at
 - Current session marked
 
 **Actions:**
@@ -165,9 +167,6 @@ View your security history at `/account/security/audit`. The audit system tracks
 **Account Events:**
 - Email verification (email.verify)
 - Profile updates (user.update)
-- Account creation and deletion
-- Passkey additions/removals
-- 2FA setup and changes
 
 **Security Events:**
 - Session revocations
@@ -184,15 +183,17 @@ Link social accounts at `/account/connections`:
 
 - Connect OAuth providers (if configured, we don't include any by default)
 - Sign in with any linked account
-- Unlink accounts (must keep at least one sign-in method)
+- Unlink accounts (must keep at least one sign-in method and cannot remove credentials)
 
 ## Delete Account
 
 At `/account/delete`:
 
 1. Enter your password
-2. Type your email to confirm
-3. Click delete
+2. Click delete
+3. Check email for confirmation link
+4. Click link and confirm deletion
+
 
 <Callout type="error">
 **This is permanent!** Your data cannot be recovered.
@@ -219,7 +220,6 @@ At `/account/delete`:
 | Passkeys | `/account/security/passkeys` |
 | Audit Log | `/account/security/audit` |
 | Connections | `/account/connections` |
-| Delete Account | `/account/delete` |
 
 ## Troubleshooting
 
