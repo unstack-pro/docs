@@ -26,7 +26,7 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 - **Application**: URLs, domain configuration, and app name
 - **Passkeys**: WebAuthn/passkey authentication configuration
 
-The auth system itself is already configured and working—you just need to connect the services.
+The auth system itself is already configured and working - you just need to connect the services.
 
 ## Quick Setup
 
@@ -45,8 +45,8 @@ cp .env.example .env.local
 #### `BETTER_AUTH_SECRET`
 
 **Required**: Yes  
-**Type**: String (Base64 encoded)  
-**Where**: Convex environment
+**Type**: String  
+**Where**: Everywhere (both `.env.local` and Convex environment and production)
 
 Your secret key for Better Auth session encryption and security.
 
@@ -68,7 +68,7 @@ This must be the same in both your `.env.local` file and Convex environment vari
 
 **Required**: Yes  
 **Type**: URL  
-**Where**: Convex environment
+**Where**: `.env.local` (and Convex environment for production)
 
 The public URL where your application is accessible.
 
@@ -92,7 +92,7 @@ OAuth callbacks and email links will use this URL. Make sure it matches your act
 
 **Required**: Yes  
 **Type**: String  
-**Where**: `.env.local` (and Convex environment for production)
+**Where**: `.env.local` (and production)
 
 Your Convex deployment identifier.
 
@@ -100,6 +100,10 @@ Your Convex deployment identifier.
 ```dotenv
 CONVEX_DEPLOYMENT="dev:merry-bison-13"
 ```
+
+<Callout type="info">
+This will be different for production (e.g., `prod:your-prod-deployment-name`).
+</Callout>
 
 **Get this by**:
 - Running `npx convex dev`
@@ -109,7 +113,7 @@ CONVEX_DEPLOYMENT="dev:merry-bison-13"
 
 **Required**: Yes  
 **Type**: URL  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
 Your Convex cloud deployment URL for client-side access.
 
@@ -126,7 +130,7 @@ Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser.
 
 **Required**: Yes  
 **Type**: URL  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
 Your Convex site URL for hosting static assets and functions.
 
@@ -141,7 +145,7 @@ NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
 
 **Required**: Yes  
 **Type**: URL  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
 Your application's public URL. Used for generating absolute URLs in emails and redirects.
 
@@ -154,7 +158,7 @@ SITE_URL="https://dev.untraceable.dev"
 
 **Required**: Yes  
 **Type**: URL  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
 Your application's public URL exposed to the browser.
 
@@ -171,9 +175,9 @@ For local development, this should be your local dev URL (e.g., `https://dev.unt
 
 **Required**: Yes  
 **Type**: String  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
-The name of your application, used throughout the UI.
+The name of your application, used throughout the UI and emails.
 
 **Example**:
 ```dotenv
@@ -231,7 +235,7 @@ The domain must be verified in your Resend account for production use.
 
 **Required**: Yes  
 **Type**: String (Domain)  
-**Where**: `.env.local`
+**Where**: `.env.local` (and production)
 
 The Relying Party ID for WebAuthn/passkey authentication. Must match your domain.
 
@@ -260,26 +264,38 @@ AUTUMN_API_KEY="am_sk_test_key"
 ```
 
 <Callout type="info">
-Autumn is required for organizations and billing functionality.
+Autumn is required for billing functionality.
+Autumn can be fully removed if you don't need organization billing.
 </Callout>
 
 ## Setting Convex Environment Variables
 
-Some variables must also be set in Convex's environment. Use the Convex CLI:
+All environment variables must be set in your Convex environment. Use the Convex CLI to set them:
 
 ```bash
-# Set authentication secret
-npx convex env set BETTER_AUTH_SECRET "your-secret-here"
+# Authentication
+npx convex env set BETTER_AUTH_SECRET "SECRET"
+npx convex env set BETTER_AUTH_URL "https://dev.untraceable.dev"
 
-# Set auth URL
-npx convex env set BETTER_AUTH_URL "https://yourdomain.com"
+# Email configuration
+npx convex env set RESEND_API_KEY "RESEND API KEY"
+npx convex env set EMAIL_FROM "Unstack Pro <no-reply@auth.unstack.pro>"
 
-# Set email configuration
-npx convex env set RESEND_API_KEY "re_your-key-here"
-npx convex env set EMAIL_FROM "Your App <no-reply@example.com>"
+# Payments (required for organizations)
+npx convex env set AUTUMN_API_KEY "API KEY HERE"
 
-# Set billing configuration (required for organizations)
-npx convex env set AUTUMN_API_KEY "am_your-key-here"
+# Application URLs
+npx convex env set NEXT_PUBLIC_APP_URL "https://dev.untraceable.dev"
+npx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
+npx convex env set SITE_URL "https://dev.untraceable.dev"
+
+# Convex configuration
+npx convex env set CONVEX_DEPLOYMENT "dev:merry-bison-13"
+npx convex env set NEXT_PUBLIC_CONVEX_URL "https://merry-bison-13.convex.cloud"
+npx convex env set NEXT_PUBLIC_CONVEX_SITE_URL "https://merry-bison-13.convex.site"
+
+# Passkeys
+npx convex env set PASSKEY_RP_ID "dev.untraceable.dev"
 ```
 
 <Callout type="info">
