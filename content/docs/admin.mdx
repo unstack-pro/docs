@@ -8,7 +8,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 # Admin Panel
 
-**The admin panel is fully functional at `/admin`.** User management, banning, role assignment\u2014everything works out of the box.
+**The admin panel is fully functional at `/admin`.** User management, banning, role assignment, everything works out of the box.
 
 <Callout type="info">
 No admin setup required. Grant someone the admin role and they can access the panel immediately.
@@ -23,7 +23,6 @@ Only users with the `admin` role can access the admin panel.
 ### Setting Admin Role
 
 Admins are typically set:
-- During initial setup
 - By existing admins
 - Through direct database access (first admin)
 
@@ -64,7 +63,6 @@ View all users with:
 - Role (user/admin)
 - Status (active/banned)
 - Join date
-- Last sign in
 - Actions menu (dropdown with all admin actions)
 
 ### User Actions Menu
@@ -98,10 +96,6 @@ Each user row has a dropdown menu with these actions:
    - Role
 3. Click create
 4. User can sign in immediately
-
-<Callout type="info">
-Created users receive a welcome email with their account details.
-</Callout>
 
 ### Change User Password
 
@@ -191,37 +185,9 @@ Login as another user for debugging or support:
 - Providing customer support
 - Verifying reported bugs
 
-<Callout type="warn">
-Impersonation logs are recorded. Use responsibly and only when necessary.
-</Callout>
-
-### Delete User
-
-Permanently delete a user account:
-
-1. Find user
-2. Click actions → "Delete User"
-3. Type user email to confirm
-4. Confirm deletion
-
-<Callout type="error">
-**This is permanent!** User data cannot be recovered. Use ban instead if temporary.
-</Callout>
-
-**What Gets Deleted:**
-- User profile
-- All sessions
-- Personal data
-- Account connections
-
-**What Remains:**
-- Organization data (if member)
-- Audit logs (anonymized)
-- System logs
-
 ## Banned Users
 
-View all banned users at `/admin` → Banned tab:
+View all banned users at `/admin` → Banned table:
 
 ### Information Shown
 
@@ -233,10 +199,8 @@ View all banned users at `/admin` → Banned tab:
 
 ### Managing Bans
 
-- View ban history
 - See ban reasons
 - Unban users
-- Edit ban duration
 
 ## Admin Best Practices
 
@@ -244,25 +208,21 @@ View all banned users at `/admin` → Banned tab:
 
 1. **Limit Admins**: Only grant to trusted users
 2. **Document Actions**: Note reasons for major changes (admin actions are not automatically audited)
-3. **Regular Audits**: Review admin actions periodically
-4. **Strong Auth**: Require 2FA for admin accounts
-5. **Separate Accounts**: Use separate admin accounts if possible
+3. **Separate Accounts**: Use separate admin accounts if possible
 
 ### User Management
 
-1. **Ban vs Delete**: Ban for temporary issues, delete only when necessary
-2. **Communication**: Inform users of major account changes
-3. **Document Bans**: Always include reason for bans
-4. **Password Changes**: Tell users when you change their password
-5. **Impersonation**: Use only for legitimate support/debugging, document usage
-6. **Verify First**: Confirm issues before taking action
+1. **Communication**: Inform users of major account changes
+2. **Document Bans**: Always include reason for bans
+3. **Password Changes**: Tell users when you change their password
+4. **Impersonation**: Use only for legitimate support/debugging, document usage
+5. **Verify First**: Confirm issues before taking action
 
 ### Operations
 
 1. **Test Actions**: Use test accounts to verify admin features
 2. **Backup**: Ensure database backups before bulk changes
-4. **Response Plan**: Have process for security incidents
-5. **Documentation**: Keep internal docs on admin procedures
+3. **Response Plan**: Have process for security incidents
 
 ## Permissions
 
@@ -276,7 +236,6 @@ Admins can:
 - Set roles
 - Ban/unban users
 - Revoke sessions
-- Delete users
 - Impersonate users (for support/debugging)
 - View statistics
 - Access admin panel
@@ -286,19 +245,7 @@ Admins can:
 
 **Can't Access Admin Panel?**
 - Verify you have admin role
-- Sign out and back in
 - Check URL is correct (`/admin`)
-
-**Action Not Working?**
-- Refresh the page
-- Check permissions
-- Verify target user exists
-- Check browser console for errors
-
-**User Still Signed In After Ban?**
-- Sessions take a moment to revoke
-- User may need to refresh
-- Try revoking sessions manually
 
 **Can't Find User?**
 - Use search function
@@ -311,9 +258,9 @@ Admins can:
 Built-in protections:
 
 - Cannot delete your own account while admin
+- Cannot impersonate other admins
 - Cannot ban yourself
 - Confirmations for destructive actions
-- Type-to-confirm for deletions
 
 ## Admin Audit
 
@@ -333,7 +280,3 @@ Built-in protections:
 - User bans/unbans
 - Password changes by admins
 - User deletions
-
-<Callout type="info">
-Admin actions should be logged manually or through custom audit implementations for full accountability.
-</Callout>
