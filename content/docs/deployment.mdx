@@ -9,7 +9,7 @@ import { Steps, Step } from 'fumadocs-ui/components/steps';
 
 # Deployment
 
-**Deploy to production in minutes.** Auth is already configured\u2014just set your production environment variables and go live.
+**Deploy to production in minutes.** Auth is already configured just set your production environment variables and go live.
 
 <Callout type="info">
 No auth configuration needed for deployment. Just connect services with production credentials.
@@ -21,9 +21,10 @@ Before deploying, ensure you have:
 
 - [ ] Completed local development setup
 - [ ] Convex account and project
+- [ ] Resend account for email sending
+- [ ] Autumn account for billing
 - [ ] Vercel account (free tier works)
 - [ ] Domain name (optional but recommended)
-- [ ] Resend account for emails
 - [ ] All environment variables documented
 
 ## Deployment Steps
@@ -65,14 +66,14 @@ Before deploying, ensure you have:
    - Note your production deployment name
 
 3. **Set production environment variables**:
-   ```bash
-   # Use Convex dashboard or CLI
-   npx convex env set BETTER_AUTH_SECRET "your-production-secret" --prod
-   npx convex env set BETTER_AUTH_URL "https://yourdomain.com" --prod
-   npx convex env set RESEND_API_KEY "your-resend-key" --prod
-   npx convex env set EMAIL_FROM "Your App <no-reply@yourdomain.com>" --prod
-   npx convex env set AUTUMN_API_KEY "your-autumn-key" --prod
-   ```
+   - Copy your entire .env file
+   - Go to "Settings" > "Environment Variables" tab
+   - Paste variables, updating:
+     - `CONVEX_DEPLOYMENT` to `prod:your-deployment-name`
+     - `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` to production URLs
+     - `NEXT_PUBLIC_APP_URL` and `SITE_URL` to your production domain
+4. **Save changes**
+
 
 <Callout type="warn">
 Use **different** secrets for production! Never reuse development secrets.
@@ -99,32 +100,15 @@ Use **different** secrets for production! Never reuse development secrets.
 
 4. **Add environment variables**:
 
-   Go to "Environment Variables" and add:
-
-   ```dotenv
-   # Authentication
-   BETTER_AUTH_SECRET=your-production-secret-different-from-dev
-   BETTER_AUTH_URL=https://yourdomain.vercel.app
-   
-   # Email
-   RESEND_API_KEY=re_your_production_key
-   EMAIL_FROM=Your App <no-reply@yourdomain.com>
-   
-   # App URLs
-   NEXT_PUBLIC_APP_URL=https://yourdomain.vercel.app
-   SITE_URL=https://yourdomain.vercel.app
-   
-   # Convex (Production)
-   CONVEX_DEPLOYMENT=prod:your-deployment-name
-   NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
-   NEXT_PUBLIC_CONVEX_SITE_URL=https://your-deployment.convex.site
-   
-   # Passkeys
-   PASSKEY_RP_ID=yourdomain.vercel.app
-   
-   # Organizations (required)
-   AUTUMN_API_KEY=your-autumn-prod-key
-   ```
+   Go to "Environment Variables" and add paste your .env variables, updating for production as needed:
+   - `BETTER_AUTH_SECRET`: New secure value
+   - `BETTER_AUTH_URL`: Your production domain
+   - `NEXT_PUBLIC_APP_URL`: Your production domain
+   - `SITE_URL`: Your production domain
+   - `PASSKEY_RP_ID`: Your production domain
+   - `CONVEX_DEPLOYMENT`: `prod:your-deployment-name`
+   - `NEXT_PUBLIC_CONVEX_URL`: Production Convex URL
+   - `NEXT_PUBLIC_CONVEX_SITE_URL`: Production Convex Site URL
 
 <Callout type="error">
 **Critical**: `BETTER_AUTH_SECRET` must be different from development and properly generated with `openssl rand -base64 32`.
@@ -206,7 +190,7 @@ For production emails, configure your domain in Resend:
 Until domain is verified, emails may go to spam or fail to send.
 </Callout>
 
-### Configure Billing (Optional)
+### Configure Billing
 
 If using Autumn for payments:
 
@@ -228,6 +212,7 @@ Configure Sentry for error tracking:
 
 <Callout type="info">
 Sentry configuration is done in code files, not environment variables.
+You can use the Sentry Wizard (@sentry/wizard) to help set this up.
 </Callout>
 
 ## Environment Variables Checklist
@@ -320,14 +305,6 @@ Preview deployments are created for pull requests automatically.
 
 ## Performance Optimization
 
-### Enable Edge Runtime (Optional)
-
-For better performance, use Edge Runtime where possible:
-
-```tsx
-// app/api/some-route/route.ts
-export const runtime = 'edge';
-```
 
 ### Optimize Images
 
@@ -343,10 +320,6 @@ import Image from 'next/image';
   height={200}
 />
 ```
-
-### Enable Compression
-
-Vercel automatically enables compression. No configuration needed.
 
 ## Security Best Practices
 
@@ -364,7 +337,6 @@ Vercel automatically enables compression. No configuration needed.
 Unstack Pro scales automatically on Vercel and Convex:
 
 - **Serverless Functions**: Auto-scale with traffic
-- **Edge Network**: Global CDN automatically
 - **Convex**: Scales automatically
 - **No Infrastructure**: Fully managed
 
