@@ -17,14 +17,16 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 ## What You're Configuring
 
-All environment variables must be set in your Convex environment. Set them in `.env.local` for local development, but replicate them in Convex for production:
+**All environment variables listed in this guide are required.** Set them in `.env.local` for local development, but they must also be configured in your Convex environment for production:
 
-- **Convex**: Database connection and deployment
-- **Resend**: Email service (required for sign-in)
-- **Autumn**: Billing (required for organizations)
-- **Secrets**: Authentication and security keys
+- **Authentication**: Better Auth configuration and secrets
+- **Convex**: Database connection and deployment URLs
+- **Resend**: Email service (required for sign-in and notifications)
+- **Autumn**: Billing and payment processing (required for organizations)
+- **Application**: URLs, domain configuration, and app name
+- **Passkeys**: WebAuthn/passkey authentication configuration
 
-The auth system itself is already configured and working.
+The auth system itself is already configured and working—you just need to connect the services.
 
 ## Quick Setup
 
@@ -36,7 +38,7 @@ cp .env.example .env.local
 
 ## Required Variables
 
-These variables must be set for the application to work:
+**All of these environment variables are required** for the application to work properly:
 
 ### Authentication
 
@@ -135,7 +137,7 @@ NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
 
 ### Application URLs
 
-#### `SITE_URL` / `NEXT_PUBLIC_APP_URL`
+#### `SITE_URL`
 
 **Required**: Yes  
 **Type**: URL  
@@ -143,16 +145,39 @@ NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
 
 Your application's public URL. Used for generating absolute URLs in emails and redirects.
 
-**Development**:
+**Example**:
 ```dotenv
-SITE_URL="http://localhost:3000"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+SITE_URL="https://dev.untraceable.dev"
 ```
 
-**Production**:
+#### `NEXT_PUBLIC_APP_URL`
+
+**Required**: Yes  
+**Type**: URL  
+**Where**: `.env.local`
+
+Your application's public URL exposed to the browser.
+
+**Example**:
 ```dotenv
-SITE_URL="https://yourdomain.com"
-NEXT_PUBLIC_APP_URL="https://yourdomain.com"
+NEXT_PUBLIC_APP_URL="https://dev.untraceable.dev"
+```
+
+<Callout type="info">
+For local development, this should be your local dev URL (e.g., `https://dev.untraceable.dev`). For production, use your production domain.
+</Callout>
+
+#### `NEXT_PUBLIC_APP_NAME`
+
+**Required**: Yes  
+**Type**: String  
+**Where**: `.env.local`
+
+The name of your application, used throughout the UI.
+
+**Example**:
+```dotenv
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
 ```
 
 ## Email Configuration
@@ -161,7 +186,7 @@ NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 
 ### `RESEND_API_KEY`
 
-**Required**: For all environments  
+**Required**: Yes  
 **Type**: String  
 **Where**: Convex environment
 
@@ -183,7 +208,7 @@ During development, you can use the test API key, but emails will only be sent t
 
 ### `EMAIL_FROM`
 
-**Required**: For all environments  
+**Required**: Yes  
 **Type**: String (Email format)  
 **Where**: Convex environment
 
@@ -204,33 +229,26 @@ The domain must be verified in your Resend account for production use.
 
 ### `PASSKEY_RP_ID`
 
-**Required**: For passkeys/WebAuthn  
+**Required**: Yes  
 **Type**: String (Domain)  
 **Where**: `.env.local`
 
 The Relying Party ID for WebAuthn/passkey authentication. Must match your domain.
 
-**Development**:
+**Example**:
 ```dotenv
-PASSKEY_RP_ID="localhost"
-```
-
-**Production**:
-```dotenv
-PASSKEY_RP_ID="yourdomain.com"
+PASSKEY_RP_ID="dev.untraceable.dev"
 ```
 
 <Callout type="warn">
 The RP ID must match the domain where your app is hosted. For subdomains, I'd recommend the main domain (e.g., `example.com` not `app.example.com`) so that passkeys work across all subdomains.
 </Callout>
 
-## Optional Variables
-
 ### Payments
 
 #### `AUTUMN_API_KEY`
 
-**Required**: For organizations (per-seat billing)  
+**Required**: Yes  
 **Type**: String  
 **Where**: Convex environment
 
@@ -241,11 +259,9 @@ Your [Autumn](https://autumn.com) API key for payment processing. Required for o
 AUTUMN_API_KEY="am_sk_test_key"
 ```
 
-<Callout type="warn">
-Autumn is required for organizations. If you don't want billing, delete all Autumn-related code from your local clone.
+<Callout type="info">
+Autumn is required for organizations and billing functionality.
 </Callout>
-
-### Monitoring
 
 ## Setting Convex Environment Variables
 
@@ -272,42 +288,54 @@ You can view and manage Convex environment variables in your [Convex dashboard](
 
 ## Complete Example
 
-Here's a complete `.env.local` file with all variables:
+Here's a complete `.env.local` file with all required variables:
 
 ```dotenv title=".env.local"
-# Authentication
-BETTER_AUTH_SECRET="dGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIGF1dGhlbnRpY2F0aW9u"
+# Authentication (REQUIRED)
+BETTER_AUTH_SECRET="SECRET"
 BETTER_AUTH_URL="https://dev.untraceable.dev"
 
-# Email
-RESEND_API_KEY="re_APIKEY"
+# Email Configuration (REQUIRED)
+RESEND_API_KEY="RESEND API KEY"
 EMAIL_FROM="Unstack Pro <no-reply@auth.unstack.pro>"
 
-# Payments (required for organizations)
-AUTUMN_API_KEY="am_sk_test_key"
+# Payments (REQUIRED)
+AUTUMN_API_KEY="API KEY HERE"
 
-# Application URLs
+# Application URLs (REQUIRED)
 NEXT_PUBLIC_APP_URL="https://dev.untraceable.dev"
 SITE_URL="https://dev.untraceable.dev"
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
 
-# Convex
+# Convex Configuration (REQUIRED)
 CONVEX_DEPLOYMENT="dev:merry-bison-13"
 NEXT_PUBLIC_CONVEX_URL="https://merry-bison-13.convex.cloud"
 NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
 
-# Passkeys
+# Passkeys (REQUIRED)
 PASSKEY_RP_ID="dev.untraceable.dev"
 ```
 
+<Callout type="warn">
+**Note**: `dev.untraceable.dev` is the URL for your locally hosted website. Update these values according to your environment.
+</Callout>
+
 ## Environment Variable Checklist
 
-Before deploying, make sure:
+Before deploying, make sure all these **required** variables are set:
 
 - [ ] `BETTER_AUTH_SECRET` is set in both `.env.local` and Convex
-- [ ] All URLs match your actual domain (no localhost in production)
-- [ ] `PASSKEY_RP_ID` matches your domain
-- [ ] Email configuration is set up with verified domain
-- [ ] Convex deployment is created and URLs are correct
+- [ ] `BETTER_AUTH_URL` matches your actual domain
+- [ ] `RESEND_API_KEY` is configured in Convex
+- [ ] `EMAIL_FROM` is configured with verified domain in Convex
+- [ ] `AUTUMN_API_KEY` is configured in Convex
+- [ ] `NEXT_PUBLIC_APP_URL` matches your actual URL
+- [ ] `NEXT_PUBLIC_APP_NAME` is set to your application name
+- [ ] `SITE_URL` matches your actual URL
+- [ ] `CONVEX_DEPLOYMENT` is set correctly
+- [ ] `NEXT_PUBLIC_CONVEX_URL` is set correctly
+- [ ] `NEXT_PUBLIC_CONVEX_SITE_URL` is set correctly
+- [ ] `PASSKEY_RP_ID` matches your domain (e.g., `dev.untraceable.dev`)
 - [ ] `.env.local` is in `.gitignore`
 - [ ] Production secrets are different from development
 
