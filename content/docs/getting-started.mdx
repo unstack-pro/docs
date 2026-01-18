@@ -10,19 +10,19 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 # Getting Started
 
-**Get up and running in 10 minutes.** Auth is already configured—you just need to connect the services.
+**Get up and running in 10 minutes.** Auth is already configured - you just need to connect the services.
 
 <Callout type="info">
-No auth setup required. Just connect Convex, Resend, and Autumn, then start building.
+No auth UI setup required. Just connect Convex, Resend, and Autumn, then start building.
 </Callout>
 
 ## What You're Setting Up
 
-You're not configuring auth—that's already done. You're just:
+You're not configuring auth - that's already done. You're just:
 1. Connecting to Convex (database)
 2. Connecting to Resend (emails - required for sign-in)
 3. Connecting to Autumn (billing - required for organizations)
-4. Setting a secret key
+4. Setting a secret key for cryptographic operations
 
 That's it. Then you have a fully working app with auth, organizations, and admin.
 
@@ -117,21 +117,47 @@ cd nextjs-convex
 
 2. **Fill in your environment variables**. See the [Environment Variables](/docs/environment-variables) page for detailed explanations.
 
-   Minimum required variables:
+   Minimum required variables (all are required for the app to function):
    ```dotenv
-   BETTER_AUTH_SECRET="your-secret-key-generate-with-openssl"
-   BETTER_AUTH_URL="http://localhost:3000"
-   CONVEX_DEPLOYMENT="your-convex-deployment"
-   NEXT_PUBLIC_CONVEX_URL="https://your-project.convex.cloud"
+   BETTER_AUTH_SECRET="SECRET"
+   BETTER_AUTH_URL="https://dev.untraceable.dev"
+   RESEND_API_KEY="RESEND API KEY"
+   EMAIL_FROM="Unstack Pro <no-reply@auth.unstack.pro>"
+   AUTUMN_API_KEY="API KEY HERE"
+   NEXT_PUBLIC_APP_URL="https://dev.untraceable.dev"
+   CONVEX_DEPLOYMENT="dev:merry-bison-13"
+   NEXT_PUBLIC_CONVEX_URL="https://merry-bison-13.convex.cloud"
+   NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
+   SITE_URL="https://dev.untraceable.dev"
+   PASSKEY_RP_ID="dev.untraceable.dev"
+   NEXT_PUBLIC_APP_NAME="Unstack Pro"
    ```
 
 3. **Set up Convex environment variables**:
    ```bash
-   npx convex env set BETTER_AUTH_SECRET "your-secret-key"
-   npx convex env set BETTER_AUTH_URL "http://localhost:3000"
-   npx convex env set RESEND_API_KEY "your-resend-key"
-   npx convex env set EMAIL_FROM "Your App <no-reply@example.com>"
-   npx convex env set AUTUMN_API_KEY "your-autumn-key"
+   # Authentication
+   npx convex env set BETTER_AUTH_SECRET "SECRET"
+   npx convex env set BETTER_AUTH_URL "https://dev.untraceable.dev"
+   
+   # Email
+   npx convex env set RESEND_API_KEY "RESEND API KEY"
+   npx convex env set EMAIL_FROM "Unstack Pro <no-reply@auth.unstack.pro>"
+   
+   # Payments
+   npx convex env set AUTUMN_API_KEY "API KEY HERE"
+   
+   # Application
+   npx convex env set NEXT_PUBLIC_APP_URL "https://dev.untraceable.dev"
+   npx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
+   npx convex env set SITE_URL "https://dev.untraceable.dev"
+   
+   # Convex
+   npx convex env set CONVEX_DEPLOYMENT "dev:merry-bison-13"
+   npx convex env set NEXT_PUBLIC_CONVEX_URL "https://merry-bison-13.convex.cloud"
+   npx convex env set NEXT_PUBLIC_CONVEX_SITE_URL "https://merry-bison-13.convex.site"
+   
+   # Passkeys
+   npx convex env set PASSKEY_RP_ID "dev.untraceable.dev"
    ```
 
 </Step>
@@ -169,8 +195,8 @@ Email verification is required for users to sign in. You'll need a [Resend](http
 2. Get your API key
 3. Add to `.env.local` and Convex:
    ```dotenv
-   RESEND_API_KEY="re_..."
-   EMAIL_FROM="Your App <no-reply@yourdomain.com>"
+   RESEND_API_KEY="RESEND API KEY"
+   EMAIL_FROM="Unstack Pro <no-reply@auth.unstack.pro>"
    ```
 
 <Callout type="info">
