@@ -1,0 +1,534 @@
+---
+title: Customization Guide
+description: How to customize and extend Unstack Pro for your product
+icon: Paintbrush
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+# Customization Guide
+
+**Customize Unstack Pro to match your brand and product needs.** The template is designed to be extended while keeping the core auth and organization features intact.
+
+<Callout type="info">
+You don't need to modify auth code to customize your app. Focus on branding, adding features, and extending the schema.
+</Callout>
+
+## Branding
+
+### Site Configuration
+
+Update your app's name, description, and metadata in `/config/site.ts`:
+
+```typescript title="config/site.ts"
+export const siteConfig = {
+  name: "Your App Name",
+  description: "Your app description for SEO and social sharing",
+  url: "https://yourdomain.com",
+  ogImage: "https://yourdomain.com/og.png",
+  links: {
+    twitter: "https://twitter.com/yourapp",
+    github: "https://github.com/yourorg/yourapp",
+  },
+};
+```
+
+### Logo and Favicon
+
+Replace the default logos:
+
+1. **Favicon**: Replace `/app/favicon.ico`
+2. **Logo**: Add your logo to `/public/logo.png` and `/public/logo-dark.png`
+3. **Update components** that reference the logo
+
+```tsx title="components/logo.tsx"
+import Image from "next/image";
+
+export function Logo() {
+  return (
+    <>
+      <Image
+        src="/logo.png"
+        alt="Your App"
+        width={120}
+        height={40}
+        className="dark:hidden"
+      />
+      <Image
+        src="/logo-dark.png"
+        alt="Your App"
+        width={120}
+        height={40}
+        className="hidden dark:block"
+      />
+    </>
+  );
+}
+```
+
+### Colors and Theme
+
+Unstack Pro uses Tailwind CSS v4 with CSS variables for theming. Customize colors in `/styles/globals.css`:
+
+```css title="styles/globals.css"
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+```
+
+### Fonts
+
+Customize fonts in `/config/fonts.ts`:
+
+```typescript title="config/fonts.ts"
+import { Inter, JetBrains_Mono } from "next/font/google";
+
+export const fontSans = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+export const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+```
+
+## Adding OAuth Providers
+
+Better Auth supports many OAuth providers. To add one:
+
+<Steps>
+
+<Step>
+
+### Configure the Provider
+
+Add the provider to your Better Auth server configuration (we use [better-convex](https://better-convex.com) for the Convex integration):
+
+```typescript title="lib/auth-server.ts"
+import { betterAuth } from "better-auth";
+
+export const auth = betterAuth({
+  // ... existing config
+  
+  // Add OAuth providers
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
+  },
+  
+  // ... rest of config
+});
+```
+
+</Step>
+
+<Step>
+
+### Add Environment Variables
+
+Add OAuth credentials to your environment:
+
+```dotenv title=".env.local"
+# Google OAuth
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# GitHub OAuth
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+```
+
+Don't forget to also set these in Convex:
+
+```bash
+npx convex env set GOOGLE_CLIENT_ID "your-google-client-id"
+npx convex env set GOOGLE_CLIENT_SECRET "your-google-client-secret"
+```
+
+</Step>
+
+<Step>
+
+### Add Sign-In Button
+
+Add the OAuth button to your login page:
+
+```tsx title="app/auth/login/_components/oauth-buttons.tsx"
+"use client";
+
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { FaGoogle, FaGithub } from "react-icons/fa";
+
+export function OAuthButtons() {
+  const signInWithGoogle = async () => {
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/",
+    });
+  };
+
+  const signInWithGithub = async () => {
+    await authClient.signIn.social({
+      provider: "github",
+      callbackURL: "/",
+    });
+  };
+
+  return (
+    <div className="grid gap-2">
+      <Button variant="outline" onClick={signInWithGoogle}>
+        <FaGoogle className="mr-2 h-4 w-4" />
+        Continue with Google
+      </Button>
+      <Button variant="outline" onClick={signInWithGithub}>
+        <FaGithub className="mr-2 h-4 w-4" />
+        Continue with GitHub
+      </Button>
+    </div>
+  );
+}
+```
+
+</Step>
+
+<Step>
+
+### Configure OAuth App
+
+Set up the OAuth app with the provider:
+
+**Google:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create OAuth 2.0 credentials
+3. Add authorized redirect URI: `https://yourdomain.com/api/auth/callback/google`
+
+**GitHub:**
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Create new OAuth App
+3. Set callback URL: `https://yourdomain.com/api/auth/callback/github`
+
+</Step>
+
+</Steps>
+
+<Callout type="info">
+For a full list of supported providers, see the [Better Auth Social Providers documentation](https://www.better-auth.com/docs/authentication/social).
+</Callout>
+
+## Adding New Pages
+
+### Create a New Route
+
+Add pages using Next.js App Router conventions:
+
+```tsx title="app/dashboard/page.tsx"
+import { requireSession } from "@/lib/session";
+
+export default async function DashboardPage() {
+  const session = await requireSession();
+
+  return (
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <p>Welcome, {session.user.name}!</p>
+    </div>
+  );
+}
+```
+
+### Protected Routes
+
+Use `requireSession()` to protect routes - it automatically redirects to the login page if the user is not authenticated:
+
+```tsx title="app/dashboard/layout.tsx"
+import { requireSession } from "@/lib/session";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await requireSession();
+
+  return <>{children}</>;
+}
+```
+
+### Organization-Scoped Routes
+
+Access organization context in routes:
+
+```tsx title="app/organizations/[organizationSlug]/projects/page.tsx"
+import { requireSession } from "@/lib/session";
+
+interface Props {
+  params: { organizationSlug: string };
+}
+
+export default async function ProjectsPage({ params }: Props) {
+  const session = await requireSession();
+  const { organizationSlug } = params;
+
+  // Fetch organization-specific data
+  // Verify user has access to this organization
+
+  return (
+    <div>
+      <h1>Projects for {organizationSlug}</h1>
+      {/* Your content */}
+    </div>
+  );
+}
+```
+
+## Customizing Auth Flows
+
+### Custom Email Templates
+
+Modify email templates in `/emails/`:
+
+```tsx title="emails/verification-email.tsx"
+import { Body, Container, Heading, Html, Text } from "@react-email/components";
+
+export default function VerificationEmail({ otp }: { otp: string }) {
+  return (
+    <Html>
+      <Body style={{ fontFamily: "sans-serif" }}>
+        <Container>
+          <Heading>Welcome to Your App!</Heading>
+          <Text>Your verification code is: <strong>{otp}</strong></Text>
+          <Text>This code expires in 10 minutes.</Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+```
+
+### Custom Validation Rules
+
+Extend Zod schemas for custom validation:
+
+```typescript title="schemas/auth.ts"
+import { z } from "zod";
+
+export const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain an uppercase letter")
+    .regex(/[0-9]/, "Password must contain a number"),
+});
+
+export const customProfileSchema = z.object({
+  name: z.string().min(2),
+  company: z.string().optional(),
+  jobTitle: z.string().optional(),
+  website: z.string().url().optional(),
+});
+```
+
+## Removing Optional Features
+
+### Remove Autumn (Billing)
+
+If you don't need billing:
+
+1. Remove `AUTUMN_API_KEY` from environment variables
+2. Delete billing-related routes in `/app/organizations/[organizationSlug]/billing/`
+3. Remove billing UI components
+4. Update organization creation to not require billing
+
+### Remove Sentry (Error Monitoring)
+
+If you don't need error tracking:
+
+1. Delete `instrumentation.ts`
+2. Delete `sentry.edge.config.ts`
+3. Delete `sentry.server.config.ts`
+4. Remove Sentry configuration from `next.config.js`
+5. Uninstall Sentry packages:
+
+```bash
+npm uninstall @sentry/nextjs
+```
+
+### Remove Passkeys
+
+If you don't need passkey authentication:
+
+1. Remove passkey routes in `/app/account/security/passkeys/`
+2. Remove passkey components
+3. Disable passkey plugin in Better Auth config:
+
+```typescript title="lib/auth-server.ts"
+export const auth = betterAuth({
+  // Remove or comment out passkey plugin
+  // plugins: [passkey()],
+});
+```
+
+## Adding New Components
+
+### Create Reusable Components
+
+Add to `/components/` for shared components:
+
+```tsx title="components/stats-card.tsx"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  description?: string;
+  icon?: React.ReactNode;
+}
+
+export function StatsCard({ title, value, description, icon }: StatsCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### Use Shadcn UI Components
+
+Add new Shadcn components as needed:
+
+```bash
+npx shadcn@latest add chart
+npx shadcn@latest add calendar
+npx shadcn@latest add command
+```
+
+## Custom Hooks
+
+Add custom hooks in `/lib/hooks/`:
+
+```typescript title="lib/hooks/use-organization.ts"
+"use client";
+
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+export function useOrganization(slug: string) {
+  const organization = useQuery(api.organizations.getBySlug, { slug });
+  const members = useQuery(api.organizations.getMembers, { slug });
+
+  return {
+    organization,
+    members,
+    isLoading: organization === undefined,
+  };
+}
+```
+
+## Environment-Specific Configuration
+
+### Development vs Production
+
+Use environment checks for different behavior:
+
+```typescript
+const isDev = process.env.NODE_ENV === "development";
+
+export const config = {
+  apiUrl: isDev
+    ? "http://localhost:3000/api"
+    : "https://yourdomain.com/api",
+  enableDebugLogs: isDev,
+  mockPayments: isDev,
+};
+```
+
+## Best Practices
+
+1. **Don't modify core auth files** unless necessary - extend instead
+2. **Keep components small** and focused on one responsibility
+3. **Use TypeScript strictly** for type safety
+4. **Follow existing patterns** for consistency
+5. **Test changes locally** before deploying
+6. **Document custom code** for future reference
+7. **Use environment variables** for all configuration
+8. **Keep secrets secure** - never commit them
+
+## Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Convex Documentation](https://docs.convex.dev)
+- [better-convex Documentation](https://better-convex.com/docs) - Our Better Auth + Convex integration
+- [Better Auth Documentation](https://www.better-auth.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Shadcn UI Documentation](https://ui.shadcn.com)
+
+## Next Steps
+
+- [Understand the project structure](/project-structure)
+- [Learn about the database schema](/database-schema)
+- [Deploy to production](/deployment)
