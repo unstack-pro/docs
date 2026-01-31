@@ -1,0 +1,397 @@
+---
+title: FAQ
+description: Frequently asked questions about Unstack Pro
+icon: HelpCircle
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Frequently Asked Questions
+
+Common questions and answers about Unstack Pro Convex Edition.
+
+## General
+
+### What is Unstack Pro?
+
+Unstack Pro is a production-ready Next.js template with authentication, organizations, and admin panel fully configured. It's designed to save you 100-200+ hours of development time by providing all the foundational features a SaaS application needs.
+
+### Who is Unstack Pro for?
+
+- **Indie hackers** building their first SaaS
+- **Startups** that need to ship fast
+- **Developers** who want to focus on product, not auth
+- **Teams** building B2B applications with organization support
+- **Anyone** who doesn't want to build auth from scratch
+
+### What tech stack does it use?
+
+| Technology | Purpose |
+|------------|---------|
+| Next.js 15 | React framework with App Router |
+| React 19 | UI library |
+| Convex | Real-time database and backend |
+| Better Auth | Authentication (via [better-convex](https://better-convex.com)) |
+| Tailwind CSS | Styling |
+| Shadcn UI + HeroUI | UI components |
+| React Email + Resend | Transactional emails |
+| Autumn | Billing |
+| TypeScript | Type safety |
+
+### Is it open source?
+
+Unstack Pro is a premium template. You purchase a license to access the private repository, and then you own the code to use in your projects.
+
+### Can I use it for multiple projects?
+
+Check your license terms. Typically, you can use the template for multiple personal or client projects, but cannot redistribute it.
+
+## Setup
+
+### How long does setup take?
+
+Most developers are up and running in 10-15 minutes. The auth system is already configured - you just need to:
+
+1. Clone the repository
+2. Install dependencies
+3. Set up Convex and Resend accounts
+4. Configure environment variables
+5. Run the development server
+
+### Do I need to know Convex?
+
+Yes, you'll need basic Convex knowledge. Most of the complex setup is already done for you, but you'll need to understand how to write queries and mutations when adding your own features. The [Convex documentation](https://docs.convex.dev) is excellent for learning the basics.
+
+### Do I need to know Better Auth?
+
+No. Authentication is already configured. You only need to understand Better Auth if you want to customize auth flows.
+
+### What accounts do I need?
+
+| Service | Required | Purpose |
+|---------|----------|---------|
+| Convex | Yes | Database and backend |
+| Resend | Yes | Email sending |
+| Autumn | Optional | Billing (can be removed) |
+| Vercel | Recommended | Deployment |
+| Sentry | Optional | Error monitoring |
+
+### Can I use a different database?
+
+Unstack Pro is built specifically for Convex. The template relies on Convex's real-time features, so switching databases would require significant modifications.
+
+### Can I use a different email provider?
+
+Yes, but you'd need to modify the email sending code. Resend + React Email is the recommended and pre-configured option.
+
+## Authentication
+
+### What authentication methods are supported?
+
+- Email/password with verification
+- OTP (one-time password) via email
+- Passkeys (WebAuthn) for passwordless auth
+- Two-factor authentication (TOTP)
+- OAuth providers (can be added)
+
+### Is email verification required?
+
+Yes. Users must verify their email address before they can sign in. This ensures valid email addresses and improves security.
+
+### Can I disable email verification?
+
+You could modify the Better Auth configuration, but it's not recommended. Email verification is a security best practice.
+
+### Can I add social login (Google, GitHub, etc.)?
+
+Yes! Better Auth supports many OAuth providers. See the [Customization Guide](/customization#adding-oauth-providers) for instructions.
+
+### How do passkeys work?
+
+Passkeys use biometric authentication (Face ID, Touch ID, Windows Hello) or security keys. Users register a passkey from their account settings and can then sign in without a password.
+
+Requirements:
+- HTTPS in production (localhost works for development)
+- Modern browser with WebAuthn support
+- `PASSKEY_RP_ID` must match your domain
+
+### How does 2FA work?
+
+Users can enable two-factor authentication from their security settings:
+
+1. Enable 2FA (requires password confirmation)
+2. Scan QR code with authenticator app
+3. Verify with a code
+4. Save 12 backup codes for recovery
+
+When signing in with 2FA enabled, users enter their email/password, then are prompted for a TOTP code.
+
+### What happens if a user loses access to their 2FA?
+
+Users can use one of their 12 backup codes to sign in. Each backup code works once. If they've used all backup codes, they'll need admin assistance to disable 2FA on their account.
+
+## Organizations
+
+### What is the organization system?
+
+Organizations provide multi-tenant support for B2B applications. Each organization:
+
+- Has its own members
+- Has roles and permissions
+- Can have teams
+- Has its own billing (via Autumn)
+
+### What roles are available?
+
+Default roles:
+
+| Role | Permissions |
+|------|-------------|
+| Owner | Full control, can delete organization |
+| Admin | Manage members and settings |
+| Member | Basic access and collaboration |
+
+You can also create custom roles with specific permissions.
+
+### Can users belong to multiple organizations?
+
+Yes. Users can be members of multiple organizations and switch between them.
+
+### How does organization billing work?
+
+Organizations use per-seat pricing through Autumn. Each member added to an organization counts as a seat. Organizations must be on the Pro plan to add members beyond the owner.
+
+### Can I remove organization billing?
+
+Yes. See the [Billing](/billing#removing-billing) documentation for instructions on removing Autumn integration.
+
+## Admin Panel
+
+### Who can access the admin panel?
+
+Only users with the `admin` role can access `/admin`.
+
+### How do I create the first admin?
+
+1. Register a normal account
+2. Go to Convex dashboard
+3. Navigate to `betterAuth` → `users`
+4. Edit your user and set `role` to `admin`
+5. Refresh your browser
+
+### What can admins do?
+
+- View all users
+- Create users
+- Change user passwords
+- Verify emails manually
+- Set user roles
+- Ban/unban users
+- Revoke user sessions
+- Impersonate users (for support)
+
+### Are admin actions logged?
+
+Admin actions are **not** currently audited. The audit system tracks user authentication and account events, but not admin panel activities.
+
+### Can I impersonate any user?
+
+Admins can impersonate regular users but cannot impersonate other admins (safety feature).
+
+## Billing
+
+### Is Autumn required?
+
+Autumn is required for organization billing features. If you don't need billing, you can remove Autumn entirely.
+
+### How does per-seat pricing work?
+
+Each organization member counts as a seat. When you add a member, the seat count increases and billing adjusts automatically. When you remove a member, the seat count decreases.
+
+### Can I use Stripe instead?
+
+Unstack Pro is configured for Autumn. Using Stripe would require replacing the billing integration code.
+
+### What happens if payment fails?
+
+The organization owner is notified. Depending on your Autumn configuration, the subscription may enter a grace period or be canceled.
+
+## Deployment
+
+### Where can I deploy?
+
+Vercel is recommended and documented. Other platforms that support Next.js should also work:
+
+- Vercel (recommended)
+- Netlify
+- Railway
+- Self-hosted
+
+### Do I need separate Convex deployments for dev and production?
+
+Yes. You should have:
+
+- Development deployment (local development)
+- Production deployment (live site)
+
+Use different environment variables for each.
+
+### How do I handle environment variables in production?
+
+Set them in your hosting platform's dashboard (e.g., Vercel Environment Variables) and in your Convex production environment.
+
+### Do I need HTTPS?
+
+For production, yes. HTTPS is required for:
+
+- Passkey authentication
+- Secure cookies
+- OAuth callbacks
+- General security
+
+## Customization
+
+### Can I change the UI/branding?
+
+Yes. Customize:
+
+- Colors in `styles/globals.css`
+- Logo and favicon in `public/`
+- Site metadata in `config/site.ts`
+- Fonts in `config/fonts.ts`
+
+### Can I add my own features?
+
+Absolutely. Add new:
+
+- Routes in `app/`
+- Components in `components/`
+- Database tables in `convex/schema.ts`
+- API functions in `convex/`
+
+### Can I modify the auth flow?
+
+Yes, but be careful. The auth system is complex and interconnected. Test thoroughly after any changes.
+
+### Can I remove features I don't need?
+
+Yes. Common removals:
+
+- Billing (Autumn)
+- Error monitoring (Sentry)
+- Passkeys
+- Teams
+- Custom roles
+
+See [Customization Guide](/customization#removing-optional-features).
+
+## Security
+
+### Is the template secure?
+
+Yes. Unstack Pro implements security best practices:
+
+- Password hashing (bcrypt)
+- HIBP password breach detection
+- Secure session management
+- CSRF protection
+- httpOnly cookies
+- Email verification
+- 2FA support
+- Audit logging
+
+### Is data encrypted?
+
+- Passwords are hashed (not stored in plain text)
+- TOTP secrets are encrypted
+- Sessions use secure tokens
+- Convex encrypts data at rest
+
+### How are sessions managed?
+
+Sessions are managed by Better Auth with httpOnly cookies. Sessions can be viewed and revoked from account settings or by admins.
+
+### Is there rate limiting?
+
+Basic rate limiting is in place. For production, consider adding additional rate limiting with Upstash Redis or similar.
+
+## Troubleshooting
+
+### Auth isn't working
+
+Most common causes:
+
+1. `BETTER_AUTH_SECRET` mismatch between `.env.local` and Convex
+2. `BETTER_AUTH_URL` doesn't match your actual URL
+3. Convex isn't running (`npx convex dev`)
+4. Cookies blocked by browser
+
+### Emails aren't sending
+
+Check:
+
+1. `RESEND_API_KEY` is correct
+2. `EMAIL_FROM` uses a verified domain
+3. In test mode, recipient must be verified
+4. Check Resend dashboard for errors
+
+### Database connection fails
+
+Verify:
+
+1. Convex is running (`npx convex dev`)
+2. All three Convex URLs are correct
+3. Deployment exists in Convex dashboard
+
+See the full [Troubleshooting Guide](/troubleshooting) for more solutions.
+
+## Support
+
+### Where can I get help?
+
+1. Check this documentation
+2. Review the [Troubleshooting Guide](/troubleshooting)
+3. Search the codebase for examples
+4. Check library documentation:
+   - [Convex Docs](https://docs.convex.dev)
+   - [better-convex Docs](https://better-convex.com/docs) - Our Better Auth + Convex integration
+   - [Better Auth Docs](https://www.better-auth.com/docs)
+   - [Next.js Docs](https://nextjs.org/docs)
+
+### Can I request features?
+
+Feature requests can be submitted through the appropriate channels provided with your purchase.
+
+### How do I report bugs?
+
+Report bugs with:
+
+1. Steps to reproduce
+2. Expected behavior
+3. Actual behavior
+4. Error messages
+5. Environment details
+
+## Updates
+
+### Will I get updates?
+
+Yes. As a license holder, you have access to the repository and can pull updates.
+
+### How do I update?
+
+```bash
+git pull origin main
+npm install
+npx convex dev
+```
+
+Review the changelog for any breaking changes or migration steps.
+
+### Will updates break my customizations?
+
+Updates are designed to be non-breaking when possible. Keep your customizations separate from core files to make updates easier.
+
+<Callout type="info">
+Still have questions? Check the documentation sections for more detailed information on specific topics.
+</Callout>
