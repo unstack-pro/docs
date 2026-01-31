@@ -1,0 +1,345 @@
+---
+title: Email Configuration
+description: Set up and customize transactional emails with Resend and React Email
+icon: Mail
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+# Email Configuration
+
+**Transactional emails are already configured and working.** Unstack Pro uses [Resend](https://resend.com) for reliable email delivery and [React Email](https://react.email) for beautiful, customizable email templates.
+
+<Callout type="info">
+Email verification is **required** for users to sign in. You must configure Resend for the application to work.
+</Callout>
+
+## Overview
+
+Unstack Pro includes a complete email system:
+
+- **Resend** for reliable email delivery
+- **React Email** for writing email templates in React
+- **Pre-built templates** for all auth flows
+- **Easy customization** with familiar React patterns
+
+## Setting Up Resend
+
+<Steps>
+
+<Step>
+
+### Create a Resend Account
+
+1. Go to [resend.com](https://resend.com)
+2. Sign up for a free account
+3. Verify your email address
+
+</Step>
+
+<Step>
+
+### Get Your API Key
+
+1. Go to your Resend dashboard
+2. Navigate to **API Keys**
+3. Click **Create API Key**
+4. Give it a name (e.g., "Unstack Pro Production")
+5. Copy the key (starts with `re_`)
+
+</Step>
+
+<Step>
+
+### Configure Environment Variables
+
+Add your Resend credentials to Convex:
+
+```bash
+npx convex env set RESEND_API_KEY "re_your_api_key_here"
+npx convex env set EMAIL_FROM "Your App <no-reply@yourdomain.com>"
+```
+
+Also add to your `.env.local` for local development reference:
+
+```dotenv
+RESEND_API_KEY="re_your_api_key_here"
+EMAIL_FROM="Your App <no-reply@yourdomain.com>"
+```
+
+</Step>
+
+<Step>
+
+### Verify Your Domain (Production)
+
+For production, you need to verify your sending domain:
+
+1. In Resend dashboard, go to **Domains**
+2. Click **Add Domain**
+3. Enter your domain (e.g., `yourdomain.com`)
+4. Add the DNS records Resend provides
+5. Wait for verification (usually a few minutes)
+
+<Callout type="warn">
+Without domain verification, emails may go to spam or fail to send. During development, you can use Resend's test mode which only sends to verified email addresses.
+</Callout>
+
+</Step>
+
+</Steps>
+
+## Email Templates
+
+All email templates are located in the `/emails` directory and built with React Email:
+
+```
+emails/
+├── verification-email.tsx          # Email verification OTP
+├── reset-password-email.tsx        # Password reset OTP
+├── signin-otp-email.tsx            # OTP sign-in code
+├── organization-invitation-email.tsx  # Organization invitations
+├── email-change-verification.tsx   # Email change verification
+└── delete-account-verification.tsx # Account deletion confirmation
+```
+
+### Available Templates
+
+| Template | Purpose | When Sent |
+|----------|---------|-----------|
+| `verification-email` | Verify new user's email | After registration |
+| `reset-password-email` | Password reset code | When user requests password reset |
+| `signin-otp-email` | OTP sign-in code | When user chooses OTP login |
+| `organization-invitation-email` | Invite to organization | When member is invited |
+| `email-change-verification` | Verify new email address | When user changes email |
+| `delete-account-verification` | Confirm account deletion | When user initiates deletion |
+
+## Customizing Email Templates
+
+React Email templates work like regular React components. Here's how to customize them:
+
+### Basic Template Structure
+
+```tsx title="emails/verification-email.tsx"
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Section,
+  Text,
+} from "@react-email/components";
+
+interface VerificationEmailProps {
+  otp: string;
+  appName: string;
+}
+
+export default function VerificationEmail({
+  otp,
+  appName,
+}: VerificationEmailProps) {
+  return (
+    <Html>
+      <Head />
+      <Preview>Your verification code for {appName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Verify your email</Heading>
+          <Text style={text}>
+            Your verification code is:
+          </Text>
+          <Section style={codeContainer}>
+            <Text style={code}>{otp}</Text>
+          </Section>
+          <Text style={text}>
+            This code expires in 10 minutes.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+// Styles
+const main = {
+  backgroundColor: "#f6f9fc",
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+};
+
+const container = {
+  backgroundColor: "#ffffff",
+  margin: "0 auto",
+  padding: "40px 20px",
+  borderRadius: "8px",
+};
+
+const h1 = {
+  color: "#1a1a1a",
+  fontSize: "24px",
+  fontWeight: "600",
+  margin: "0 0 20px",
+};
+
+const text = {
+  color: "#4a5568",
+  fontSize: "16px",
+  lineHeight: "24px",
+  margin: "0 0 16px",
+};
+
+const codeContainer = {
+  background: "#f4f4f5",
+  borderRadius: "8px",
+  padding: "16px",
+  textAlign: "center" as const,
+};
+
+const code = {
+  color: "#1a1a1a",
+  fontSize: "32px",
+  fontWeight: "700",
+  letterSpacing: "4px",
+  margin: "0",
+};
+```
+
+### Customization Tips
+
+**Change Branding:**
+- Update colors to match your brand
+- Add your logo using the `Img` component
+- Modify copy to match your voice
+
+**Add Logo:**
+```tsx
+import { Img } from "@react-email/components";
+
+<Img
+  src="https://yourdomain.com/logo.png"
+  alt="Your App"
+  width={120}
+  height={40}
+/>
+```
+
+**Add Footer:**
+```tsx
+<Section style={footer}>
+  <Text style={footerText}>
+    © 2024 Your Company. All rights reserved.
+  </Text>
+  <Text style={footerText}>
+    123 Main Street, City, Country
+  </Text>
+</Section>
+```
+
+## Email Sending Logic
+
+Emails are sent from Convex functions. The integration is already configured in the Better Auth setup:
+
+```typescript title="convex/betterAuth/email.ts"
+import { Resend } from "resend";
+import VerificationEmail from "@/emails/verification-email";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function sendVerificationEmail(
+  email: string,
+  otp: string
+) {
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: "Verify your email",
+    react: VerificationEmail({ otp, appName: "Your App" }),
+  });
+}
+```
+
+## Email Deliverability
+
+During development, emails may end up in spam. This is expected behavior before you verify your domain. See [Resend's guide on email deliverability](https://resend.com/blog/why-your-emails-are-going-to-spam) for more details.
+
+## Rate Limits
+
+Resend has rate limits based on your plan:
+
+| Plan | Emails/day |
+|------|------------|
+| Free | 100 |
+| Pro | 50,000+ |
+
+<Callout type="info">
+For most SaaS applications, the free tier is sufficient during development. Upgrade as you scale.
+</Callout>
+
+## Adding New Email Templates
+
+To create a new email template:
+
+1. **Create the template file**:
+
+```tsx title="emails/welcome-email.tsx"
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Text,
+} from "@react-email/components";
+
+interface WelcomeEmailProps {
+  name: string;
+  appName: string;
+}
+
+export default function WelcomeEmail({ name, appName }: WelcomeEmailProps) {
+  return (
+    <Html>
+      <Head />
+      <Preview>Welcome to {appName}!</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Welcome, {name}!</Heading>
+          <Text style={text}>
+            Thanks for joining {appName}. We're excited to have you.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+// ... styles
+```
+
+2. **Create sending function** in your Convex backend
+3. **Call the function** from your application logic
+
+## Environment Variables Summary
+
+| Variable | Required | Where | Description |
+|----------|----------|-------|-------------|
+| `RESEND_API_KEY` | Yes | Convex | Your Resend API key |
+| `EMAIL_FROM` | Yes | Convex | Sender address (e.g., `App <no-reply@domain.com>`) |
+
+## Resources
+
+- [Resend Documentation](https://resend.com/docs)
+- [React Email Documentation](https://react.email/docs)
+- [React Email Components](https://react.email/docs/components/html)
+- [Email Deliverability Guide](https://resend.com/docs/dashboard/emails/deliverability)
+
+## Next Steps
+
+- [Customize your email templates](#customizing-email-templates)
+- [Set up domain verification](#verify-your-domain-production)
+- [Test email flows](/authentication)
+- [Deploy to production](/deployment)

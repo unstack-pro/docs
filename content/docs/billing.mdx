@@ -1,0 +1,413 @@
+---
+title: Billing
+description: Set up and manage billing with Autumn for per-seat pricing
+icon: CreditCard
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+# Billing Integration
+
+**Billing is already integrated with Autumn for per-seat pricing.** Organizations are automatically charged based on the number of members on the Pro plan.
+
+<Callout type="info">
+Billing is organization-scoped. Each organization has its own subscription and is billed per user. Autumn can be removed if you don't need billing.
+</Callout>
+
+## Overview
+
+Unstack Pro uses [Autumn](https://useautumn.com) for billing:
+
+- **Per-seat pricing**: Charge per organization member
+- **Automatic billing**: Adding members adjusts billing automatically
+- **Organization-scoped**: Each organization has its own subscription
+- **Self-service**: Users manage billing through Autumn's portal
+
+## How It Works
+
+### Billing Flow
+
+1. User creates an organization
+2. Organization starts on Free tier (no members allowed)
+3. Owner upgrades to Pro plan via Autumn
+4. Pro plan enables adding organization members
+5. Each member added increases the subscription cost
+6. Billing is handled automatically by Autumn
+
+### Plans
+
+| Plan | Members | Features |
+|------|---------|----------|
+| Free | Owner only | Basic organization features |
+| Pro | Unlimited | Full member management, teams, custom roles |
+
+<Callout type="info">
+Organizations cannot add members until they are on the Pro plan.
+</Callout>
+
+## Setting Up Autumn
+
+<Steps>
+
+<Step>
+
+### Create an Autumn Account
+
+1. Go to [useautumn.com](https://useautumn.com)
+2. Sign up for an account
+3. Create a new project
+
+</Step>
+
+<Step>
+
+### Get Your API Key
+
+1. In Autumn dashboard, go to **Settings** → **API Keys**
+2. Create a new API key
+3. Copy the key (starts with `am_sk_`)
+
+</Step>
+
+<Step>
+
+### Configure Environment Variables
+
+Add your Autumn API key to Convex:
+
+```bash
+npx convex env set AUTUMN_API_KEY "am_sk_your_api_key_here"
+```
+
+Also add to `.env.local`:
+
+```dotenv
+AUTUMN_API_KEY="am_sk_your_api_key_here"
+```
+
+</Step>
+
+<Step>
+
+### Configure Your Product
+
+In Autumn dashboard:
+
+1. Create a **Product** (e.g., "Pro Plan")
+2. Set pricing model to **Per-seat**
+3. Configure the price per seat
+4. Set billing interval (monthly/yearly)
+
+</Step>
+
+<Step>
+
+### Set Up Webhooks (Optional)
+
+For real-time billing events:
+
+1. In Autumn, go to **Webhooks**
+2. Add your webhook endpoint: `https://yourdomain.convex.site/autumn-webhook`
+3. Select events to receive
+
+</Step>
+
+</Steps>
+
+## Managing Subscriptions
+
+### Organization Billing Page
+
+Organization owners and admins can manage billing at `/organizations/[slug]/billing`:
+
+**View Subscription:**
+- Current plan status
+- Number of seats/members
+- Price per seat
+- Next billing date
+- Total monthly cost
+
+**Manage Subscription:**
+- Upgrade to Pro
+- Access Autumn billing portal
+- View order history
+- Download invoices
+
+### Autumn Customer Portal
+
+Users are redirected to Autumn's hosted portal for:
+- Updating payment method
+- Viewing invoices
+- Managing subscription
+- Canceling subscription
+
+```tsx
+// Example: Redirect to billing portal
+const handleManageBilling = async () => {
+  const portalUrl = await getBillingPortalUrl(organizationId);
+  window.open(portalUrl, "_blank");
+};
+```
+
+## Per-Seat Billing Logic
+
+### Adding Members
+
+When a member is added to an organization:
+
+1. System checks organization has Pro plan
+2. If on Pro, member is added
+3. Autumn automatically updates seat count
+4. Next invoice reflects new seat
+
+### Removing Members
+
+When a member is removed:
+
+1. Member is removed from organization
+2. Seat count decreases
+3. Prorated credit applied (depending on Autumn settings)
+
+### Example Pricing
+
+| Members | Monthly Cost (at $10/seat) |
+|---------|---------------------------|
+| 1 (owner) | $10 |
+| 5 | $50 |
+| 10 | $100 |
+| 50 | $500 |
+
+## Implementation Details
+
+### Checking Subscription Status
+
+```typescript title="lib/utils/billing.ts"
+import { getAutumnCustomer } from "@/lib/autumn";
+
+export async function canAddMembers(organizationId: string): Promise<boolean> {
+  const customer = await getAutumnCustomer(organizationId);
+  return customer?.plan === "pro" && customer?.status === "active";
+}
+```
+
+### Gating Features by Plan
+
+```tsx title="components/organization/add-member-form.tsx"
+"use client";
+
+import { useOrganization } from "@/lib/hooks/use-organization";
+
+export function AddMemberForm({ organizationId }: { organizationId: string }) {
+  const { subscription } = useOrganization(organizationId);
+
+  if (subscription?.plan !== "pro") {
+    return (
+      <div className="text-center p-8">
+        <h3>Upgrade to Pro</h3>
+        <p>Add team members by upgrading to the Pro plan.</p>
+        <UpgradeButton organizationId={organizationId} />
+      </div>
+    );
+  }
+
+  return (
+    // Member invitation form
+  );
+}
+```
+
+### Organization-Scoped Customers
+
+Organizations are mapped to Autumn customers:
+
+```typescript
+// When organization is created
+await autumn.customers.create({
+  id: organization.id, // Use org ID as customer ID
+  email: owner.email,
+  name: organization.name,
+});
+
+// When upgrading
+await autumn.subscriptions.create({
+  customerId: organization.id,
+  productId: "pro-plan",
+  quantity: 1, // Initial seat for owner
+});
+
+// When adding member
+await autumn.subscriptions.update({
+  customerId: organization.id,
+  quantity: memberCount + 1,
+});
+```
+
+## Billing Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/organizations/[slug]/billing` | Billing dashboard |
+| `/organizations/[slug]/billing/upgrade` | Upgrade to Pro |
+| `/organizations/[slug]/billing/portal` | Redirect to Autumn portal |
+
+## Handling Billing Events
+
+### Webhook Events
+
+Common Autumn webhook events:
+
+| Event | Description | Action |
+|-------|-------------|--------|
+| `subscription.created` | New subscription | Enable Pro features |
+| `subscription.updated` | Seats changed | Update member limits |
+| `subscription.canceled` | Plan canceled | Disable Pro features |
+| `payment.succeeded` | Payment processed | Send receipt email |
+| `payment.failed` | Payment failed | Notify organization owner |
+
+### Webhook Handler
+
+```typescript title="convex/http.ts"
+import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
+
+const http = httpRouter();
+
+http.route({
+  path: "/autumn-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    const signature = request.headers.get("x-autumn-signature");
+
+    // Verify webhook signature
+    if (!verifySignature(body, signature)) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+
+    switch (body.event) {
+      case "subscription.created":
+        await handleSubscriptionCreated(ctx, body.data);
+        break;
+      case "subscription.canceled":
+        await handleSubscriptionCanceled(ctx, body.data);
+        break;
+      // ... handle other events
+    }
+
+    return new Response("OK", { status: 200 });
+  }),
+});
+
+export default http;
+```
+
+## Removing Billing
+
+If you don't need billing:
+
+<Steps>
+
+<Step>
+
+### Remove Environment Variable
+
+Remove `AUTUMN_API_KEY` from Convex and `.env.local`.
+
+</Step>
+
+<Step>
+
+### Delete Billing Routes
+
+Remove the billing directory:
+
+```
+app/organizations/[organizationSlug]/billing/
+```
+
+</Step>
+
+<Step>
+
+### Update Organization Logic
+
+Modify member addition to not check for Pro plan:
+
+```typescript
+// Remove the plan check in add member logic
+export async function addMember(organizationId: string, userId: string) {
+  // Skip: const canAdd = await canAddMembers(organizationId);
+  
+  await db.insert("members", {
+    organizationId,
+    userId,
+    role: "member",
+    createdAt: Date.now(),
+  });
+}
+```
+
+</Step>
+
+<Step>
+
+### Remove Billing UI Components
+
+Remove billing-related components and references from:
+- Organization sidebar
+- Organization settings
+- Dashboard cards
+
+</Step>
+
+</Steps>
+
+## Troubleshooting
+
+### Subscription Not Updating
+
+**Check:**
+- Autumn API key is correct
+- Webhook endpoint is configured
+- Organization ID matches Autumn customer ID
+
+### Payment Failed
+
+**User should:**
+1. Access billing portal
+2. Update payment method
+3. Retry payment
+
+**System should:**
+1. Send notification to organization owner
+2. Gracefully handle expired subscriptions
+3. Provide clear upgrade path
+
+### Can't Add Members
+
+**Verify:**
+- Organization is on Pro plan
+- Subscription is active (not canceled)
+- No payment failures
+
+## Best Practices
+
+1. **Clear pricing**: Show per-seat cost clearly
+2. **Upgrade prompts**: Guide users to upgrade when needed
+3. **Graceful degradation**: Handle expired subscriptions gracefully
+4. **Email notifications**: Notify users of billing events
+5. **Audit trail**: Log billing-related actions
+6. **Test in sandbox**: Use Autumn's test mode before production
+
+## Resources
+
+- [Autumn Documentation](https://useautumn.com/docs)
+- [Autumn API Reference](https://useautumn.com/docs/api)
+- [Per-Seat Billing Guide](https://useautumn.com/docs/guides/per-seat)
+
+## Next Steps
+
+- [Configure organizations](/organizations)
+- [Set up email notifications](/email)
+- [Deploy to production](/deployment)
