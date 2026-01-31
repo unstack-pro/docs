@@ -133,11 +133,7 @@ At `/organizations/[slug]/teams`:
 
 ### Team Management
 
-Each team has its own:
-- Member list
-- Settings
-- Access control
-- Collaboration space
+Each team has its own list of members
 
 ## Organization Settings
 
@@ -147,7 +143,6 @@ Manage settings at `/organizations/[slug]/settings`:
 
 **Organization Name**
 - Change organization display name
-- Must be unique across your instance
 
 **Organization Logo**
 - Upload custom logo
@@ -157,7 +152,7 @@ Manage settings at `/organizations/[slug]/settings`:
 **Organization Slug**
 - URL-friendly identifier
 - Used in routes
-- Cannot be changed after creation
+- Must be unique
 
 ### Danger Zone
 
@@ -201,6 +196,10 @@ Organizations use **per-seat pricing** through Autumn. Each organization gets on
 - See current member count
 - Check per-user pricing
 - View billing cycle and renewal
+
+<Callout type="info">
+By default organizations cannot add members until they are on the pro plan.
+</Callout>
 
 ### Member Management & Billing
 

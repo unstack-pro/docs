@@ -21,7 +21,7 @@ No auth UI setup required. Just connect Convex, Resend, and Autumn, then start b
 You're not configuring auth - that's already done. You're just:
 1. Connecting to Convex (database)
 2. Connecting to Resend (emails - required for sign-in)
-3. Connecting to Autumn (billing - required for organizations)
+3. Connecting to Autumn (billing - optional, required only if you want organization billing)
 4. Setting a secret key for cryptographic operations
 
 That's it. Then you have a fully working app with auth, organizations, and admin.
@@ -119,45 +119,38 @@ cd nextjs-convex
 
    Minimum required variables (all are required for the app to function):
    ```dotenv
-   BETTER_AUTH_SECRET="SECRET"
-   BETTER_AUTH_URL="https://dev.untraceable.dev"
-   RESEND_API_KEY="RESEND API KEY"
-   EMAIL_FROM="Unstack Pro <no-reply@auth.unstack.pro>"
-   AUTUMN_API_KEY="API KEY HERE"
-   NEXT_PUBLIC_APP_URL="https://dev.untraceable.dev"
-   CONVEX_DEPLOYMENT="dev:merry-bison-13"
-   NEXT_PUBLIC_CONVEX_URL="https://merry-bison-13.convex.cloud"
-   NEXT_PUBLIC_CONVEX_SITE_URL="https://merry-bison-13.convex.site"
-   SITE_URL="https://dev.untraceable.dev"
-   PASSKEY_RP_ID="dev.untraceable.dev"
-   NEXT_PUBLIC_APP_NAME="Unstack Pro"
+   BETTER_AUTH_SECRET="your-generated-secret"
+   BETTER_AUTH_URL="http://localhost:3000"
+   RESEND_API_KEY="re_your_resend_api_key"
+   EMAIL_FROM="Your App <no-reply@yourdomain.com>"
+   AUTUMN_API_KEY="am_sk_your_autumn_key"
+   NEXT_PUBLIC_APP_URL="http://localhost:3000"
+   CONVEX_DEPLOYMENT="dev:your-deployment-name"
+   NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
+   NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
+   PASSKEY_RP_ID="localhost"
+   NEXT_PUBLIC_APP_NAME="Your App Name"
    ```
 
 3. **Set up Convex environment variables**:
    ```bash
    # Authentication
-   npx convex env set BETTER_AUTH_SECRET "SECRET"
-   npx convex env set BETTER_AUTH_URL "https://dev.untraceable.dev"
+   npx convex env set BETTER_AUTH_SECRET "your-generated-secret"
+   npx convex env set BETTER_AUTH_URL "http://localhost:3000"
    
    # Email
-   npx convex env set RESEND_API_KEY "RESEND API KEY"
-   npx convex env set EMAIL_FROM "Unstack Pro <no-reply@auth.unstack.pro>"
+   npx convex env set RESEND_API_KEY "re_your_resend_api_key"
+   npx convex env set EMAIL_FROM "Your App <no-reply@yourdomain.com>"
    
-   # Payments
-   npx convex env set AUTUMN_API_KEY "API KEY HERE"
+   # Payments (optional - only if using billing)
+   npx convex env set AUTUMN_API_KEY "am_sk_your_autumn_key"
    
    # Application
-   npx convex env set NEXT_PUBLIC_APP_URL "https://dev.untraceable.dev"
-   npx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
-   npx convex env set SITE_URL "https://dev.untraceable.dev"
-   
-   # Convex
-   npx convex env set CONVEX_DEPLOYMENT "dev:merry-bison-13"
-   npx convex env set NEXT_PUBLIC_CONVEX_URL "https://merry-bison-13.convex.cloud"
-   npx convex env set NEXT_PUBLIC_CONVEX_SITE_URL "https://merry-bison-13.convex.site"
+   npx convex env set NEXT_PUBLIC_APP_URL "http://localhost:3000"
+   npx convex env set NEXT_PUBLIC_APP_NAME "Your App Name"
    
    # Passkeys
-   npx convex env set PASSKEY_RP_ID "dev.untraceable.dev"
+   npx convex env set PASSKEY_RP_ID "localhost"
    ```
 
 </Step>
