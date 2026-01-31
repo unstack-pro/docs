@@ -17,7 +17,7 @@ You don't need to modify the auth system. Focus on the `/app` directory where yo
 ## Root Structure
 
 ```
-unstack-pro-convex-edition/
+convex-better-auth/
 ├── app/                    # Next.js App Router pages
 ├── actions/                # Server actions
 ├── components/             # Reusable React components
@@ -25,6 +25,7 @@ unstack-pro-convex-edition/
 ├── emails/                 # Email templates (React Email)
 ├── lib/                    # Utilities and core logic
 ├── schemas/                # Validation schemas (Zod)
+├── scripts/                # Build and utility scripts
 ├── styles/                 # Global styles
 ├── types/                  # TypeScript type definitions
 └── ... config files
@@ -32,7 +33,7 @@ unstack-pro-convex-edition/
 
 ## App Directory (`/app`)
 
-Next.js 14+ App Router structure with all routes.
+Next.js 15 App Router structure with all routes.
 
 ### Authentication Routes
 
@@ -40,14 +41,33 @@ Next.js 14+ App Router structure with all routes.
 app/auth/
 ├── layout.tsx              # Auth pages layout
 ├── page.tsx                # Auth redirect/landing
-├── login/                  # Sign in pages
+├── login/
 │   ├── page.tsx
 │   ├── loading.tsx
-│   ├── 2fa/               # Two-factor verification
-│   └── _components/       # Login-specific components
-├── register/              # Sign up pages
-├── forgot-password/       # Password reset
-└── ...
+│   ├── 2fa/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── _components/
+│   │       ├── backup-code-verify-form.tsx
+│   │       ├── totp-verify-form.tsx
+│   │       └── two-factor-form.tsx
+│   └── _components/
+│       ├── login-form.tsx
+│       ├── otp-request-form.tsx
+│       ├── passkey-login-button.tsx
+│       └── password-login-form.tsx
+├── register/
+│   ├── page.tsx
+│   ├── loading.tsx
+│   └── _components/
+│       └── register-form.tsx
+└── forgot-password/
+    ├── page.tsx
+    ├── loading.tsx
+    └── _components/
+        ├── email-request-form.tsx
+        ├── forgot-password-form.tsx
+        └── reset-password-form.tsx
 ```
 
 ### Account Routes
@@ -56,16 +76,75 @@ app/auth/
 app/account/
 ├── layout.tsx              # Account layout with sidebar
 ├── page.tsx                # Account dashboard
-├── settings/               # Profile settings
-├── security/               # Security settings
-│   ├── page.tsx           # Security overview
-│   ├── sessions/          # Session management
-│   ├── two-factor/        # 2FA configuration
-│   ├── passkeys/          # Passkey management
-│   └── audit/             # Security audit log
-├── connections/            # OAuth account linking
-├── invitations/            # Organization invites
-└── delete/                 # Account deletion
+├── loading.tsx
+├── settings/
+│   ├── page.tsx
+│   ├── loading.tsx
+│   └── _components/
+│       └── settings-client.tsx
+├── security/
+│   ├── page.tsx            # Security overview
+│   ├── sessions/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── _components/
+│   │       ├── revoke-all-sessions-button.tsx
+│   │       ├── revoke-other-sessions-button.tsx
+│   │       ├── revoke-session-button.tsx
+│   │       ├── session-card.tsx
+│   │       └── sessions-client.tsx
+│   ├── two-factor/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── _components/
+│   │       ├── backup-codes-step.tsx
+│   │       ├── disable-two-factor.tsx
+│   │       ├── enable-two-factor-form.tsx
+│   │       ├── otp-verify-step.tsx
+│   │       ├── qr-code-step.tsx
+│   │       ├── regenerate-backup-codes.tsx
+│   │       ├── two-factor-configure-form.tsx
+│   │       ├── two-factor-status-card.tsx
+│   │       └── view-backup-codes.tsx
+│   ├── passkeys/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── _components/
+│   │       ├── delete-passkey-dialog.tsx
+│   │       ├── edit-passkey-name-dialog.tsx
+│   │       ├── empty-state.tsx
+│   │       ├── passkey-card.tsx
+│   │       ├── passkeys-client-list.tsx
+│   │       └── register-passkey-button.tsx
+│   ├── audit/
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   └── _components/
+│   │       ├── audit-card.tsx
+│   │       └── audit-client.tsx
+│   └── _components/
+│       ├── delete-account-dialog.tsx
+│       ├── delete-confirmation-form.tsx
+│       └── security-settings-client.tsx
+├── connections/
+│   ├── page.tsx
+│   ├── loading.tsx
+│   └── _components/
+│       ├── connection-card.tsx
+│       ├── connections-client.tsx
+│       ├── empty-state.tsx
+│       └── unlink-account-button.tsx
+├── invitations/
+│   ├── page.tsx
+│   ├── loading.tsx
+│   └── _components/
+│       ├── invitation-highlighter.tsx
+│       └── invitations-client.tsx
+└── delete/
+    ├── page.tsx
+    ├── loading.tsx
+    └── _components/
+        └── delete-account-form.tsx
 ```
 
 ### Organization Routes
@@ -74,14 +153,56 @@ app/account/
 app/organizations/
 ├── layout.tsx              # Org layout
 ├── page.tsx                # Org list
-└── [organizationSlug]/     # Dynamic org routes
+├── loading.tsx
+└── [organizationSlug]/
     ├── page.tsx            # Org dashboard
-    ├── members/            # Member management
-    ├── invitations/        # Invite management
-    ├── teams/              # Team management
-    ├── roles/              # Custom roles
-    ├── settings/           # Org settings
-    └── billing/            # Billing (optional)
+    ├── loading.tsx
+    ├── members/
+    │   ├── page.tsx
+    │   ├── loading.tsx
+    │   └── _components/
+    │       └── members-table.tsx
+    ├── invitations/
+    │   ├── page.tsx
+    │   ├── loading.tsx
+    │   └── _components/
+    │       ├── accept-invitation-button.tsx
+    │       ├── cancel-invitation-button.tsx
+    │       ├── invitation-card.tsx
+    │       ├── invitations-list.tsx
+    │       └── reject-invitation-button.tsx
+    ├── teams/
+    │   ├── page.tsx
+    │   ├── loading.tsx
+    │   ├── [teamId]/
+    │   │   ├── page.tsx
+    │   │   └── loading.tsx
+    │   └── _components/
+    │       └── teams-list.tsx
+    ├── roles/
+    │   ├── page.tsx
+    │   ├── loading.tsx
+    │   └── _components/
+    │       ├── create-role-dialog.tsx
+    │       ├── edit-role-dialog.tsx
+    │       ├── roles-manager.tsx
+    │       └── roles-table.tsx
+    ├── settings/
+    │   ├── page.tsx
+    │   ├── loading.tsx
+    │   └── _components/
+    │       ├── delete-organization-dialog.tsx
+    │       ├── edit-organization-name.tsx
+    │       ├── organization-image-uploader.tsx
+    │       └── settings-client.tsx
+    └── billing/
+        ├── page.tsx
+        ├── loading.tsx
+        └── _components/
+            ├── manage-billing.tsx
+            ├── orders-table.tsx
+            ├── plan-hero-card.tsx
+            └── upgrade-plan-button.tsx
 ```
 
 ### Admin Routes
@@ -90,10 +211,17 @@ app/organizations/
 app/admin/
 ├── page.tsx                # Admin dashboard
 ├── loading.tsx             # Loading state
-└── _components/            # Admin-specific components
-    ├── users-table.tsx
+└── _components/
+    ├── admin-stats.tsx
     ├── ban-user-dialog.tsx
-    └── ...
+    ├── banned-users-table.tsx
+    ├── change-password-dialog.tsx
+    ├── create-user-dialog.tsx
+    ├── revoke-sessions-dialog.tsx
+    ├── set-role-dialog.tsx
+    ├── users-manager.tsx
+    ├── users-table.tsx
+    └── verify-email-dialog.tsx
 ```
 
 ### API Routes
@@ -105,15 +233,29 @@ app/api/
         └── route.ts        # Better Auth API handler
 ```
 
+### Other Routes
+
+```
+app/
+├── layout.tsx              # Root layout
+├── page.tsx                # Home page
+├── providers.tsx           # App providers
+├── global-error.tsx        # Global error boundary
+├── goodbye/
+│   ├── page.tsx            # Account deleted confirmation
+│   └── loading.tsx
+└── success/
+    ├── page.tsx            # Success page
+    └── loading.tsx
+```
+
 ## Actions Directory (`/actions`)
 
 Server actions for server-side operations.
 
 ```
 actions/
-├── get-backup-codes.ts     # 2FA backup code retrieval
-├── update-profile-picture.ts
-└── ...
+└── update-profile-picture.ts
 ```
 
 <Callout type="info">
@@ -130,13 +272,21 @@ Reusable React components organized by category.
 components/auth/
 ├── change-password-form.tsx
 ├── controlled-email-input.tsx
+├── controlled-input.tsx
+├── controlled-otp-input.tsx
 ├── controlled-password-input.tsx
+├── editable-email-input.tsx
+├── editable-name-input.tsx
+├── form-submit-button.tsx
 ├── logout-button.tsx
 ├── otp-input.tsx
+├── otp-verify-form.tsx
+├── password-confirmation-form.tsx
 ├── password-input.tsx
 ├── profile-picture-uploader.tsx
 ├── profile-sidebar.tsx
-└── ...
+├── resend-control.tsx
+└── verify-email-dialog.tsx
 ```
 
 ### Organization Components
@@ -145,12 +295,17 @@ components/auth/
 components/organization/
 ├── add-member-card.tsx
 ├── add-member-form.tsx
+├── add-member-to-team-dialog.tsx
 ├── create-organization-dialog.tsx
+├── create-team-dialog.tsx
 ├── invite-member-dialog.tsx
+├── member-card.tsx
 ├── organization-selector.tsx
 ├── organization-sidebar.tsx
+├── role-multiselect.tsx
 ├── team-card.tsx
-└── ...
+├── team-members-empty-state.tsx
+└── teams-empty-state.tsx
 ```
 
 ### UI Components
@@ -159,11 +314,28 @@ components/organization/
 components/ui/
 ├── button.tsx
 ├── card.tsx
+├── command.tsx
 ├── dialog.tsx
-├── input.tsx
-├── table.tsx
 ├── dropdown-menu.tsx
-└── ...                     # Shadcn/ui components
+├── input.tsx
+├── multi-select.tsx
+├── popover.tsx
+├── select.tsx
+├── separator.tsx
+├── sheet.tsx
+├── sidebar.tsx
+├── skeleton.tsx
+├── table.tsx
+├── tooltip.tsx
+└── visually-hidden.tsx
+```
+
+### Other Components
+
+```
+components/
+├── faq.tsx
+└── user-dropdown.tsx
 ```
 
 ## Config Directory (`/config`)
@@ -172,8 +344,8 @@ Application configuration files.
 
 ```
 config/
-├── site.ts                 # Site metadata and constants
-└── fonts.ts                # Font configuration
+├── fonts.ts                # Font configuration
+└── site.ts                 # Site metadata and constants
 ```
 
 ## Emails Directory (`/emails`)
@@ -182,12 +354,12 @@ React Email templates for transactional emails.
 
 ```
 emails/
-├── verification-email.tsx
+├── delete-account-verification.tsx
+├── email-change-verification.tsx
+├── organization-invitation-email.tsx
 ├── reset-password-email.tsx
 ├── signin-otp-email.tsx
-├── organization-invitation-email.tsx
-├── email-change-verification.tsx
-└── delete-account-verification.tsx
+└── verification-email.tsx
 ```
 
 <Callout type="info">
@@ -203,10 +375,23 @@ Core application logic and utilities.
 ```
 lib/
 ├── auth-client.ts          # Better Auth client config
-├── auth-server.ts          # Better Auth server config
 ├── auth-helpers.ts         # Auth utility functions
+├── auth-server.ts          # Better Auth server config
+├── autumn.ts               # Autumn SDK integration
+├── http-polyfills.ts       # HTTP polyfills
+├── permissions.ts          # RBAC permissions
 ├── session.ts              # Session management
-└── permissions.ts          # RBAC permissions
+└── utils.ts                # General utilities
+```
+
+### Convex
+
+```
+lib/convex/
+├── convex-provider.tsx     # Convex React provider
+├── query-client.tsx        # Query client setup
+├── rsc.tsx                 # React Server Components helpers
+└── server.ts               # Server-side Convex utilities
 ```
 
 ### Plugins
@@ -215,12 +400,16 @@ lib/
 lib/plugin/
 ├── audit/                  # Audit logging plugin
 │   ├── client.ts
-│   ├── server.ts
-│   └── index.ts
-└── overrides/              # Custom auth overrides
+│   ├── index.ts
+│   └── server.ts
+├── overrides/              # Custom auth overrides
+│   ├── client.ts
+│   ├── index.ts
+│   └── server.ts
+└── reverify/               # Re-verification plugin
     ├── client.ts
-    ├── server.ts
-    └── index.ts
+    ├── index.ts
+    └── server.ts
 ```
 
 ### Hooks
@@ -237,9 +426,10 @@ lib/hooks/
 ```
 lib/utils/
 ├── admin.ts                # Admin-related utilities
-├── organization.ts         # Org management utilities
 ├── currency.ts             # Currency formatting
 ├── date.ts                 # Date formatting
+├── download.ts             # File download utilities
+├── organization.ts         # Org management utilities
 ├── string.ts               # String utilities
 └── toast.ts                # Toast notifications
 ```
@@ -251,6 +441,17 @@ Zod validation schemas.
 ```
 schemas/
 └── auth.ts                 # Auth form validation schemas
+```
+
+## Scripts Directory (`/scripts`)
+
+Build and utility scripts.
+
+```
+scripts/
+├── compile-all-pages.ts    # Page compilation script
+├── line-count.ts           # Line counting utility
+└── view-file-tree.ts       # File tree visualization
 ```
 
 ## Styles Directory (`/styles`)
@@ -273,13 +474,38 @@ types/
 
 ## Configuration Files
 
+### Root Config Files
+
+```
+├── .env                    # Environment variables
+├── .env.example            # Example environment template
+├── .env.local              # Local environment overrides
+├── .env.sentry-build-plugin # Sentry build configuration
+├── .gitignore              # Git ignore rules
+├── @useautumn-sdk.d.ts     # Autumn SDK type definitions
+├── autumn.config.ts        # Autumn configuration
+├── biome.json              # Biome linting/formatting
+├── components.json         # Shadcn/ui configuration
+├── instrumentation-client.ts # Client-side instrumentation
+├── instrumentation.ts      # Server instrumentation
+├── next-env.d.ts           # Next.js TypeScript env
+├── next.config.js          # Next.js configuration
+├── package.json            # Dependencies and scripts
+├── postcss.config.js       # PostCSS configuration
+├── sentry.edge.config.ts   # Sentry Edge Runtime config
+├── sentry.server.config.ts # Sentry server config
+├── tailwind.config.js      # Tailwind CSS configuration
+├── tsconfig.json           # TypeScript configuration
+└── tsconfig.tsbuildinfo    # TypeScript build info
+```
+
 ### `next.config.js`
 
 Next.js configuration with Sentry integration.
 
-### `instrumentation.ts`
+### `instrumentation.ts` & `instrumentation-client.ts`
 
-Sentry client-side instrumentation for error tracking.
+Sentry instrumentation for error tracking.
 
 ### `sentry.edge.config.ts`
 
@@ -339,11 +565,11 @@ export default function Loading() {
 
 ### Error Boundaries
 
-`error.tsx` files handle errors:
+`error.tsx` and `global-error.tsx` files handle errors:
 
 ```tsx
-// app/error.tsx
-export default function Error({ error, reset }) {
+// app/global-error.tsx
+export default function GlobalError({ error, reset }) {
   return <ErrorUI error={error} retry={reset} />
 }
 ```
@@ -384,7 +610,7 @@ Underscore prefixed folders are not treated as routes by Next.js.
 
 ### Frontend
 
-- **Next.js 14+**: App Router, Server Components
+- **Next.js 15**: App Router, Server Components
 - **React 19**: Latest React features
 - **Tailwind CSS**: Utility-first styling
 - **Shadcn/ui**: Component library
@@ -393,7 +619,7 @@ Underscore prefixed folders are not treated as routes by Next.js.
 
 ### Backend
 
-- **Better Auth**: Authentication framework
+- **Better Auth**: Authentication framework (via [better-convex](https://better-convex.com))
 - **Convex**: Realtime database
 - **Resend**: Email service
 - **React Email**: Email templates
