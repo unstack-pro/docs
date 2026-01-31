@@ -1,13 +1,19 @@
 {
-    "title": "Documentation",
-    "pages": [
-        "index",
-        "getting-started",
-        "environment-variables",
-        "authentication",
-        "organizations",
-        "admin",
-        "project-structure",
-        "deployment"
-    ]
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "environment-variables",
+    "project-structure",
+    "authentication",
+    "organizations",
+    "admin",
+    "billing",
+    "email",
+    "database-schema",
+    "customization",
+    "deployment",
+    "troubleshooting",
+    "faq"
+  ]
 }
