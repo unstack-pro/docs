@@ -71,7 +71,7 @@ Before deploying, ensure you have:
    - Paste variables, updating:
      - `CONVEX_DEPLOYMENT` to `prod:your-deployment-name`
      - `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` to production URLs
-     - `NEXT_PUBLIC_APP_URL` and `SITE_URL` to your production domain
+     - `NEXT_PUBLIC_APP_URL` to your production domain
 4. **Save changes**
 
 
@@ -104,7 +104,7 @@ Use **different** secrets for production! Never reuse development secrets.
    - `BETTER_AUTH_SECRET`: New secure value
    - `BETTER_AUTH_URL`: Your production domain
    - `NEXT_PUBLIC_APP_URL`: Your production domain
-   - `SITE_URL`: Your production domain
+   - `NEXT_PUBLIC_APP_NAME`: Your application name
    - `PASSKEY_RP_ID`: Your production domain
    - `CONVEX_DEPLOYMENT`: `prod:your-deployment-name`
    - `NEXT_PUBLIC_CONVEX_URL`: Production Convex URL
@@ -134,7 +134,6 @@ Use **different** secrets for production! Never reuse development secrets.
    ```dotenv
    BETTER_AUTH_URL=https://yourdomain.com
    NEXT_PUBLIC_APP_URL=https://yourdomain.com
-   SITE_URL=https://yourdomain.com
    PASSKEY_RP_ID=yourdomain.com
    ```
 
@@ -206,9 +205,10 @@ Configure Sentry for error tracking:
 1. Create Sentry project
 2. Get DSN from Sentry dashboard
 3. Configure in these files:
-   - `instrumentation.ts` (client-side)
+   - `instrumentation.ts` (server-side)
+   - `instrumentation-client.ts` (client-side)
    - `sentry.edge.config.ts` (edge runtime)
-   - `sentry.server.config.ts` (server-side)
+   - `sentry.server.config.ts` (server-side config)
 
 <Callout type="info">
 Sentry configuration is done in code files, not environment variables.
@@ -222,14 +222,14 @@ Required for production:
 - [ ] `BETTER_AUTH_SECRET` (new, secure value)
 - [ ] `BETTER_AUTH_URL` (your domain)
 - [ ] `NEXT_PUBLIC_APP_URL` (your domain)
-- [ ] `SITE_URL` (your domain)
+- [ ] `NEXT_PUBLIC_APP_NAME` (your app name)
 - [ ] `CONVEX_DEPLOYMENT` (production)
 - [ ] `NEXT_PUBLIC_CONVEX_URL` (production)
 - [ ] `NEXT_PUBLIC_CONVEX_SITE_URL` (production)
 - [ ] `PASSKEY_RP_ID` (your domain)
 - [ ] `RESEND_API_KEY` (production key)
 - [ ] `EMAIL_FROM` (verified domain)
-- [ ] `AUTUMN_API_KEY` (required for organizations)
+- [ ] `AUTUMN_API_KEY` (optional, required only for organization billing)
 
 Optional:
 - [ ] Configure Sentry in code files (if using monitoring)
@@ -389,9 +389,10 @@ If issues persist:
 
 1. Check [Vercel Docs](https://vercel.com/docs)
 2. Check [Convex Docs](https://docs.convex.dev)
-3. Check [Better Auth Docs](https://www.better-auth.com/docs)
-4. Review GitHub issues
-5. Contact support
+3. Check [better-convex Docs](https://better-convex.com/docs) - Our Better Auth + Convex integration
+4. Check [Better Auth Docs](https://www.better-auth.com/docs)
+5. Review GitHub issues
+6. Contact support
 
 ## Next Steps
 
