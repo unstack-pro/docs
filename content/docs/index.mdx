@@ -57,7 +57,7 @@ Fully functional admin dashboard:
 Enterprise-grade security built in:
 - Passkeys for passwordless auth
 - 2FA with TOTP and backup codes
-- Comprehensive audit logs
+- User audit logs (authentication and account events)
 - Session revocation
 - Secure account deletion
 
@@ -65,8 +65,8 @@ Enterprise-grade security built in:
 
 ### 🎨 Tech Stack
 Built with modern, scalable technologies:
-- **Framework**: Next.js 16 + React 19 with App Router
-- **Auth**: Better Auth v1.4 (fully configured with 10+ plugins)
+- **Framework**: Next.js 15 + React 19 with App Router
+- **Auth**: Better Auth v1.4 via [better-convex](https://better-convex.com) (fully configured with 10+ plugins)
 - **UI Components**: 50+ components (HeroUI + ShadCN/ui)
 - **Forms**: React Hook Form (optimized for minimal re-renders)
 - **Styling**: Tailwind CSS with dark mode
@@ -103,9 +103,39 @@ Built with modern, scalable technologies:
     description="Manage users and system"
   />
   <Card 
+    title="Billing" 
+    href="/billing"
+    description="Per-seat pricing with Autumn"
+  />
+  <Card 
+    title="Email Configuration" 
+    href="/email"
+    description="Transactional emails with Resend"
+  />
+  <Card 
+    title="Database Schema" 
+    href="/database-schema"
+    description="Convex data models"
+  />
+  <Card 
+    title="Customization" 
+    href="/customization"
+    description="Extend and customize the template"
+  />
+  <Card 
     title="Deployment" 
     href="/deployment"
     description="Deploy to production"
+  />
+  <Card 
+    title="Troubleshooting" 
+    href="/troubleshooting"
+    description="Common issues and solutions"
+  />
+  <Card 
+    title="FAQ" 
+    href="/faq"
+    description="Frequently asked questions"
   />
 </Cards>
 
