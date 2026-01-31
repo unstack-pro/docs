@@ -114,6 +114,19 @@ Use **different** secrets for production! Never reuse development secrets.
 **Critical**: `BETTER_AUTH_SECRET` must be different from development and properly generated with `openssl rand -base64 32`.
 </Callout>
 
+5. **Generate JWKS keys for production**:
+   ```bash
+   bunx convex run betterAuth/auth:rotateKeys | bunx convex env set JWKS --prod
+   ```
+
+<Callout type="warn">
+JWKS key rotation will log out all existing users. Run this during low-traffic periods.
+</Callout>
+
+<Callout type="info">
+**Prerequisite**: Ensure you've run `npx convex dev` at least once to push the `betterAuth/auth:rotateKeys` function to your deployment before running this command.
+</Callout>
+
 5. **Deploy**:
    - Click "Deploy"
    - Wait for build to complete (2-3 minutes)
@@ -230,6 +243,7 @@ Required for production:
 - [ ] `RESEND_API_KEY` (production key)
 - [ ] `EMAIL_FROM` (verified domain)
 - [ ] `AUTUMN_API_KEY` (optional, required only for organization billing)
+- [ ] `JWKS` (generated with `bunx convex run betterAuth/auth:rotateKeys | bunx convex env set JWKS --prod`)
 
 Optional:
 - [ ] Configure Sentry in code files (if using monitoring)

@@ -44,8 +44,8 @@ cp .env.example .env.local
 
 #### `BETTER_AUTH_SECRET`
 
-**Required**: Yes  
-**Type**: String  
+**Required**: Yes
+**Type**: String
 **Where**: Everywhere (both `.env.local` and Convex environment and production)
 
 Your secret key for Better Auth session encryption and security.
@@ -62,6 +62,29 @@ BETTER_AUTH_SECRET="dGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIGF1dGhlbnRpY2F0aW9u"
 
 <Callout type="error">
 This must be the same in both your `.env.local` file and Convex environment variables!
+</Callout>
+
+#### `JWKS`
+
+**Required**: Yes
+**Type**: JSON String
+**Where**: Convex environment (required for production)
+
+JSON Web Key Set containing the public/private key pair used for JWT token validation. This is automatically generated and rotated.
+
+**Generate or rotate keys with**:
+```bash
+bunx convex run betterAuth/auth:rotateKeys | bunx convex env set JWKS
+```
+
+<Callout type="warn">
+**Key rotation will log out all users!** Run this only when necessary, such as during low-traffic periods.
+</Callout>
+
+<Callout type="info">
+For production deployment, JWKS is automatically generated when you first set it up. The keys are stored in your Convex environment and used for validating JWT tokens across all requests.
+
+**Note**: The `betterAuth/auth:rotateKeys` function must exist in your deployment. Run `npx convex dev` at least once to push your Convex functions before running this command.
 </Callout>
 
 #### `BETTER_AUTH_URL`
@@ -373,9 +396,10 @@ Before deploying, make sure all these **required** variables are set:
 
 1. **Never commit secrets**: Add `.env.local` to `.gitignore`
 2. **Rotate secrets regularly**: Especially `BETTER_AUTH_SECRET`
-3. **Use different secrets**: Development and production should have different values
-4. **Restrict API keys**: Use the minimum permissions necessary
-5. **Monitor access**: Review Convex and Resend logs regularly
+3. **Rotate JWKS keys periodically**: Use `bunx convex run betterAuth/auth:rotateKeys | bunx convex env set JWKS`
+4. **Use different secrets**: Development and production should have different values
+5. **Restrict API keys**: Use the minimum permissions necessary
+6. **Monitor access**: Review Convex and Resend logs regularly
 
 <Callout type="error">
 **Production Reminder**: Always use HTTPS in production. Never use `http://` URLs for `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`.
