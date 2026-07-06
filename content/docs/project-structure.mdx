@@ -28,12 +28,13 @@ convex-better-auth/
 ├── scripts/                # Build and utility scripts
 ├── styles/                 # Global styles
 ├── types/                  # TypeScript type definitions
+├── video/                  # Remotion demo-video project (own deps)
 └── ... config files
 ```
 
 ## App Directory (`/app`)
 
-Next.js 15 App Router structure with all routes.
+Next.js 16 App Router structure with all routes.
 
 ### Authentication Routes
 
@@ -241,6 +242,10 @@ app/
 ├── page.tsx                # Home page
 ├── providers.tsx           # App providers
 ├── global-error.tsx        # Global error boundary
+├── (legal)/                # Terms & Privacy scaffolding
+│   ├── layout.tsx          # Shared legal layout
+│   ├── terms/page.tsx      # Terms of Service (starter copy)
+│   └── privacy/page.tsx    # Privacy Policy (starter copy)
 ├── goodbye/
 │   ├── page.tsx            # Account deleted confirmation
 │   └── loading.tsx
@@ -248,6 +253,12 @@ app/
     ├── page.tsx            # Success page
     └── loading.tsx
 ```
+
+<Callout type="warn">
+The `app/(legal)/terms` and `app/(legal)/privacy` pages ship with **starter copy**
+parameterized via `config/site.ts` (`appName`, `supportEmail`). Replace and review
+this copy before production — see the [Customization](/customization#legal-pages-terms--privacy) guide.
+</Callout>
 
 ## Actions Directory (`/actions`)
 
@@ -449,10 +460,20 @@ Build and utility scripts.
 
 ```
 scripts/
+├── capture-demo.ts         # Playwright demo capture (bun run demo:capture)
 ├── compile-all-pages.ts    # Page compilation script
 ├── line-count.ts           # Line counting utility
+├── run-demo-node.ts        # Node runner for demo scripts
+├── sync-template.ts        # Template update sync script
 └── view-file-tree.ts       # File tree visualization
 ```
+
+<Callout type="info">
+`scripts/sync-template.ts` powers template updates (see
+[Template Updates](/template-updates)); `.template-version` records the last
+synced commit. The `video/` project + `demo:*` scripts render a demo video —
+see [Customization](/customization#demo-video-tooling-bonus).
+</Callout>
 
 ## Styles Directory (`/styles`)
 
@@ -541,11 +562,13 @@ Dependencies and scripts:
 ```json
 {
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "biome lint",
-    "format": "biome format"
+    "dev": "next dev --turbopack",
+    "build": "tsgo --noEmit && next build --turbopack",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "demo:capture": "…",  // Playwright capture
+    "demo:video": "…",    // Remotion render
+    "demo:render": "…"    // capture + render
   }
 }
 ```
@@ -610,7 +633,7 @@ Underscore prefixed folders are not treated as routes by Next.js.
 
 ### Frontend
 
-- **Next.js 15**: App Router, Server Components
+- **Next.js 16**: App Router, Server Components
 - **React 19**: Latest React features
 - **Tailwind CSS**: Utility-first styling
 - **Shadcn/ui**: Component library

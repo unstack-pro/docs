@@ -148,29 +148,29 @@ Better Auth supports many OAuth providers. To add one:
 
 ### Configure the Provider
 
-Add the provider to your Better Auth server configuration (we use [better-convex](https://better-convex.com) for the Convex integration):
+Add a `socialProviders` block to `createAuthOptions` in
+`convex/betterAuth/auth.ts` — this is the source of truth for auth config (Better
+Auth runs *inside* Convex):
 
-```typescript title="lib/auth-server.ts"
-import { betterAuth } from "better-auth";
-
-export const auth = betterAuth({
-  // ... existing config
-  
-  // Add OAuth providers
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    },
+```typescript title="convex/betterAuth/auth.ts"
+// inside createAuthOptions(...)
+socialProviders: {
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   },
-  
-  // ... rest of config
-});
+  github: {
+    clientId: process.env.GITHUB_CLIENT_ID!,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+  },
+},
 ```
+
+<Callout type="info">
+No social providers are configured out of the box — the stack is OAuth-*ready*.
+Because these env vars are read in the Convex runtime, set them with
+`bunx convex env set` (see below).
+</Callout>
 
 </Step>
 
@@ -193,8 +193,8 @@ GITHUB_CLIENT_SECRET="your-github-client-secret"
 Don't forget to also set these in Convex:
 
 ```bash
-npx convex env set GOOGLE_CLIENT_ID "your-google-client-id"
-npx convex env set GOOGLE_CLIENT_SECRET "your-google-client-secret"
+bunx convex env set GOOGLE_CLIENT_ID "your-google-client-id"
+bunx convex env set GOOGLE_CLIENT_SECRET "your-google-client-secret"
 ```
 
 </Step>
@@ -389,23 +389,28 @@ export const customProfileSchema = z.object({
 
 If you don't need billing:
 
-1. Remove `AUTUMN_API_KEY` from environment variables
+1. Remove `AUTUMN_SECRET_KEY` from environment variables
 2. Delete billing-related routes in `/app/organizations/[organizationSlug]/billing/`
 3. Remove billing UI components
 4. Update organization creation to not require billing
 
 ### Remove Sentry (Error Monitoring)
 
-If you don't need error tracking:
+Sentry is **environment-variable driven** — the SDK no-ops when
+`NEXT_PUBLIC_SENTRY_DSN` is empty, and builds skip source-map upload when
+`SENTRY_AUTH_TOKEN` is missing. To simply disable it, leave those variables unset;
+no code changes are required.
 
-1. Delete `instrumentation.ts`
-2. Delete `sentry.edge.config.ts`
-3. Delete `sentry.server.config.ts`
-4. Remove Sentry configuration from `next.config.js`
-5. Uninstall Sentry packages:
+To remove it entirely:
+
+1. Delete `instrumentation.ts`, `instrumentation-client.ts`,
+   `sentry.edge.config.ts`, and `sentry.server.config.ts`
+2. Remove the Sentry wrapper from `next.config.js`
+3. Drop the `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_*` env vars
+4. Uninstall the package:
 
 ```bash
-npm uninstall @sentry/nextjs
+bun remove @sentry/nextjs
 ```
 
 ### Remove Passkeys
@@ -462,9 +467,9 @@ export function StatsCard({ title, value, description, icon }: StatsCardProps) {
 Add new Shadcn components as needed:
 
 ```bash
-npx shadcn@latest add chart
-npx shadcn@latest add calendar
-npx shadcn@latest add command
+bunx shadcn@latest add chart
+bunx shadcn@latest add calendar
+bunx shadcn@latest add command
 ```
 
 ## Custom Hooks
@@ -506,6 +511,56 @@ export const config = {
   mockPayments: isDev,
 };
 ```
+
+## Legal Pages (Terms & Privacy)
+
+The template ships starter **Terms of Service** and **Privacy Policy** pages so you
+have something to link from the footer and the register screen on day one:
+
+```
+app/(legal)/
+├── layout.tsx          # Shared minimal legal layout
+├── terms/page.tsx      # Terms of Service (starter copy)
+└── privacy/page.tsx    # Privacy Policy (starter copy)
+```
+
+Company/app name and the contact address are parameterized through
+`config/site.ts` (`appName`, `supportEmail`), so you mostly edit copy rather than
+markup.
+
+<Callout type="error">
+The starter copy is a **scaffold, not legal advice**. Before going to production,
+review and replace the Terms and Privacy copy with your own (ideally with counsel),
+set `NEXT_PUBLIC_SUPPORT_EMAIL` to your real support address, and confirm the listed
+data processors and retention/refund terms match your business.
+</Callout>
+
+## Demo Video Tooling (Bonus)
+
+The template includes a two-stage pipeline that turns the real app into an edited,
+launch-style demo video — a bonus you can use or delete.
+
+```bash
+# One-time setup
+bun run demo:install-browsers    # Playwright Chromium
+cd video && bun install && cd .. # the Remotion project has its own deps
+
+# With `bun convex dev` and `bun dev` running:
+DEMO_EMAIL=you@example.com DEMO_PASSWORD=your-password bun run demo:render
+```
+
+- **`bun run demo:capture`** — Playwright drives the app and captures real screens
+  into `video/public/demo` (see the header comment in `scripts/capture-demo.ts` for
+  the full list of `DEMO_*` env vars).
+- **`bun run demo:video`** — renders the Remotion composition in `video/`.
+- **`bun run demo:render`** — runs both stages; output is
+  `demo-output/unstack-pro-demo-latest.mp4`.
+
+<Callout type="info">
+The `video/` Remotion project is a self-contained package with its **own**
+dependencies — run `bun install` inside it once before rendering. See the product
+README's "Scripted Demo Video" section for details.
+</Callout>
 
 ## Best Practices
 
