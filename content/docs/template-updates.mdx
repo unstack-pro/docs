@@ -1,0 +1,185 @@
+---
+title: Template Updates
+description: Pull ongoing template fixes and features into your project with one command
+icon: RefreshCw
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+# Template Updates
+
+Your purchase includes **lifetime access to updates** — bug fixes, security
+patches, new features, and dependency bumps. Everything is delivered through a
+single local command.
+
+## How Updates Reach You
+
+Updates live in the template repository **`unstack-pro/nextjs-convex`**, which is a
+private mirror of the product. On purchase you're **invited to that repository**, so
+your own git credentials can fetch it. There's nothing to configure in GitHub.
+
+<Callout type="info">
+There is **no GitHub Actions workflow** and no automatic/weekly sync. The one and
+only update mechanism is running `bun scripts/sync-template.ts` locally. (Earlier
+versions of the template shipped a CI workflow — it has been removed because a
+repo-scoped `GITHUB_TOKEN` can't read the private template.)
+</Callout>
+
+## The One Command
+
+From the root of your project:
+
+```bash
+bun scripts/sync-template.ts
+```
+
+Run without flags, it will:
+
+<Steps>
+
+<Step>
+### Add and fetch the template remote
+
+Adds `unstack-pro/nextjs-convex` as a `template` remote (one-time) and fetches it.
+</Step>
+
+<Step>
+### Detect the template branch and preview the changelog
+
+Auto-detects the template's default branch (`master` or `main`) and prints the new
+commits since your last sync.
+</Step>
+
+<Step>
+### Create a sync branch and merge
+
+Creates a `template-sync-<timestamp>` branch and merges the template changes
+(handling unrelated histories on the first sync), then commits and updates
+`.template-version`.
+</Step>
+
+<Step>
+### Push and open a pull request
+
+On a clean merge, it prompts to push the branch and open a PR against **your
+repository's default branch** (auto-detected from `origin` — never assumed to be
+`main` or `master`).
+</Step>
+
+</Steps>
+
+<Callout type="info">
+PR creation uses the GitHub CLI (`gh`) when it's installed **and** authenticated. If
+`gh` is missing or unauthenticated, the branch is still pushed and a GitHub
+**compare URL** is printed so you can open the PR in your browser. If `origin` isn't
+a GitHub remote, the script prints next-step instructions instead.
+</Callout>
+
+## Flags
+
+```bash
+# See what's new without changing anything
+bun scripts/sync-template.ts --check-only
+
+# Create the sync branch and commit, but skip the push + PR step
+bun scripts/sync-template.ts --no-pr
+
+# Merge straight into the current branch, no sync branch (use with caution)
+bun scripts/sync-template.ts --auto-merge
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--check-only` | Fetch and show the changelog, then exit without applying anything. |
+| `--no-pr` | Create the sync branch and commit, but leave it local (no push/PR). Prints the next steps to push and open a PR yourself. |
+| `--auto-merge` | Merge directly into your current branch without a sync branch, and skip the push/PR step. |
+
+<Callout type="warn">
+The script refuses to run with **uncommitted changes** (except with `--auto-merge`).
+Commit or stash your work first.
+</Callout>
+
+## Handling Merge Conflicts
+
+Conflicts are normal if you've customized the code. When the merge can't complete
+cleanly, the script leaves the merge open and prints instructions. Resolve it like
+any git conflict:
+
+<Steps>
+
+<Step>
+### Find the conflicts
+
+```bash
+git status
+```
+
+Look for files marked "both modified" or containing conflict markers
+(`<<<<<<<`, `=======`, `>>>>>>>`).
+</Step>
+
+<Step>
+### Resolve each file
+
+Decide per conflict whether to keep your version, take the template's, or merge
+both. Common cases:
+
+- **`package.json`** — accept template dependency bumps, keep your added deps.
+- **`convex/*`, `lib/auth-client.ts`** — template changes here are usually
+  improvements; accept unless you've customized them.
+- **`app/*`, `components/*`** — if you've customized heavily, review carefully.
+</Step>
+
+<Step>
+### Test, then complete the merge
+
+```bash
+bun install
+bunx tsgo --noEmit
+bun run lint
+
+git add .
+git commit
+git push -u origin HEAD
+gh pr create --base <your-default-branch>
+```
+</Step>
+
+</Steps>
+
+## `.template-version`
+
+The `.template-version` file records the template commit you last synced to. The
+script uses it to compute the changelog range and to detect when you're already up
+to date. **Don't delete it** — without it, the next sync treats every template
+commit as new.
+
+Check your current status any time:
+
+```bash
+# Your synced commit
+cat .template-version
+
+# Latest template commit
+git fetch template
+git rev-parse template/master   # or template/main
+```
+
+## Best Practices
+
+1. **Sync regularly** — monthly keeps conflicts small.
+2. **Review the PR changelog** before merging.
+3. **Test in development** after syncing, before deploying.
+4. **Keep `.template-version`** in your repo.
+5. **Document your customizations** so conflict resolution is easier.
+
+## Opting Out
+
+If you don't want template updates:
+
+1. Delete `scripts/sync-template.ts`
+2. Remove the remote: `git remote remove template`
+3. Delete `.template-version`
+
+You can always re-add the remote later to resume syncing.
