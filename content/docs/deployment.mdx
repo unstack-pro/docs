@@ -43,7 +43,7 @@ Before deploying, ensure you have:
 
 2. **Push to GitHub**:
    ```bash
-   git push origin main
+   git push origin HEAD   # your default branch (master or main)
    ```
 
 3. **Verify `.gitignore` includes**:
@@ -65,13 +65,14 @@ Before deploying, ensure you have:
    - Go to "Settings"
    - Note your production deployment name
 
-3. **Set production environment variables**:
-   - Copy your entire .env file
-   - Go to "Settings" > "Environment Variables" tab
-   - Paste variables, updating:
-     - `CONVEX_DEPLOYMENT` to `prod:your-deployment-name`
-     - `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` to production URLs
-     - `NEXT_PUBLIC_APP_URL` to your production domain
+3. **Set the Convex deployment environment variables** (the Section 2 vars from
+   [Environment Variables](/environment-variables)) — `BETTER_AUTH_SECRET`,
+   `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY`, `AUTUMN_SECRET_KEY`, `PASSKEY_RP_ID`,
+   `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_APP_NAME`:
+   - Use `bunx convex env set NAME "value" --prod`, or
+   - Go to "Settings" > "Environment Variables" tab in the dashboard and add them,
+     using production values (production domain for `NEXT_PUBLIC_APP_URL` and
+     `PASSKEY_RP_ID`)
 4. **Save changes**
 
 
@@ -95,39 +96,50 @@ Use **different** secrets for production! Never reuse development secrets.
 3. **Configure project**:
    - **Framework Preset**: Next.js
    - **Root Directory**: `./`
-   - **Build Command**: `next build`
+   - **Build Command**: `bun run build` (runs `tsgo --noEmit && next build --turbopack`)
    - **Output Directory**: `.next`
 
-4. **Add environment variables**:
+4. **Add environment variables** (the **Next.js** side — see the Section 1 vars in
+   [Environment Variables](/environment-variables)):
 
-   Go to "Environment Variables" and add paste your .env variables, updating for production as needed:
-   - `BETTER_AUTH_SECRET`: New secure value
-   - `BETTER_AUTH_URL`: Your production domain
+   Go to "Environment Variables" and add your production values:
    - `NEXT_PUBLIC_APP_URL`: Your production domain
    - `NEXT_PUBLIC_APP_NAME`: Your application name
-   - `PASSKEY_RP_ID`: Your production domain
-   - `CONVEX_DEPLOYMENT`: `prod:your-deployment-name`
-   - `NEXT_PUBLIC_CONVEX_URL`: Production Convex URL
-   - `NEXT_PUBLIC_CONVEX_SITE_URL`: Production Convex Site URL
+   - `NEXT_PUBLIC_CONVEX_URL`: Production Convex URL (`….convex.cloud`)
+   - `NEXT_PUBLIC_CONVEX_SITE_URL`: Production Convex site URL (`….convex.site`)
+   - `NEXT_PUBLIC_SUPPORT_EMAIL`: Support address (optional)
+   - `AUTUMN_SECRET_KEY`: Autumn secret key — **also** required on the Convex
+     deployment (the Next.js billing routes read it here at runtime)
+   - `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`:
+     Sentry (optional — leave unset to disable)
 
-<Callout type="error">
-**Critical**: `BETTER_AUTH_SECRET` must be different from development and properly generated with `openssl rand -base64 32`.
+<Callout type="info">
+`BETTER_AUTH_SECRET`, `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY`, `PASSKEY_RP_ID` and
+`AUTUMN_SECRET_KEY` also live on the **Convex** deployment (set in the previous
+step), not just on Vercel. `AUTUMN_SECRET_KEY` is needed in both.
 </Callout>
 
-5. **Generate JWKS keys for production**:
+5. **Generate JWKS keys for the production deployment** (once functions are
+   pushed):
    ```bash
-   bunx convex run betterAuth/auth:rotateKeys --prod | bunx convex env set JWKS --prod
+   # Initial key set
+   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks --prod)" --prod
+   ```
+
+   To rotate later:
+   ```bash
+   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:rotateKeys --prod)" --prod
    ```
 
 <Callout type="warn">
-JWKS key rotation will log out all existing users. Run this during low-traffic periods.
+JWKS key rotation will log out all existing users. Run rotation during low-traffic periods.
 </Callout>
 
 <Callout type="info">
-**Prerequisite**: Ensure you've run `npx convex dev` at least once to push the `betterAuth/auth:rotateKeys` function to your deployment before running this command.
+**Prerequisite**: run `bunx convex deploy` (or `bun convex dev` at least once) to push the `betterAuth/auth` functions to your production deployment before running these commands.
 </Callout>
 
-5. **Deploy**:
+6. **Deploy**:
    - Click "Deploy"
    - Wait for build to complete (2-3 minutes)
    - Vercel will provide a URL
@@ -143,16 +155,16 @@ JWKS key rotation will log out all existing users. Run this during low-traffic p
    - Add your domain
    - Follow DNS instructions
 
-2. **Update environment variables**:
+2. **Update environment variables** (Vercel + Convex):
    ```dotenv
-   BETTER_AUTH_URL=https://yourdomain.com
    NEXT_PUBLIC_APP_URL=https://yourdomain.com
    PASSKEY_RP_ID=yourdomain.com
    ```
 
-3. **Update Convex environment**:
+3. **Update the Convex deployment**:
    ```bash
-   npx convex env set BETTER_AUTH_URL "https://yourdomain.com" --prod
+   bunx convex env set NEXT_PUBLIC_APP_URL "https://yourdomain.com" --prod
+   bunx convex env set PASSKEY_RP_ID "yourdomain.com" --prod
    ```
 
 <Callout type="info">
@@ -206,56 +218,61 @@ Until domain is verified, emails may go to spam or fail to send.
 
 If using Autumn for payments:
 
-1. Set up Autumn account
-2. Get production API key
-3. Add `AUTUMN_API_KEY` to Vercel
-4. Test payment flows
+1. Set up an Autumn account and run `bunx atmn push` against your live account
+2. Get your production secret key (starts with `am_sk_`)
+3. Add `AUTUMN_SECRET_KEY` to **both** Vercel and the Convex deployment
+4. Test the checkout and portal flows
+
+<Callout type="error">
+`AUTUMN_SECRET_KEY` must be set on **both** Vercel (the Next.js billing routes read
+it at runtime) and the Convex deployment (the auth hooks read it). Missing it in
+either place breaks billing.
+</Callout>
 
 ### Set Up Monitoring (Optional)
 
-Configure Sentry for error tracking:
+Sentry is **environment-variable driven** — no code changes are needed. Set these
+in Vercel to enable it:
 
-1. Create Sentry project
-2. Get DSN from Sentry dashboard
-3. Configure in these files:
-   - `instrumentation.ts` (server-side)
-   - `instrumentation-client.ts` (client-side)
-   - `sentry.edge.config.ts` (edge runtime)
-   - `sentry.server.config.ts` (server-side config)
+- `NEXT_PUBLIC_SENTRY_DSN` — your Sentry project DSN (when empty, Sentry is disabled)
+- `SENTRY_ORG`, `SENTRY_PROJECT` — used at build time
+- `SENTRY_AUTH_TOKEN` — enables source-map upload during the build
 
 <Callout type="info">
-Sentry configuration is done in code files, not environment variables.
-You can use the Sentry Wizard (@sentry/wizard) to help set this up.
+Leave `NEXT_PUBLIC_SENTRY_DSN` unset to disable Sentry entirely — the SDK no-ops,
+and builds skip source-map upload when `SENTRY_AUTH_TOKEN` is missing.
 </Callout>
 
 ## Environment Variables Checklist
 
-Required for production:
+**Vercel (Next.js runtime):**
 
-- [ ] `BETTER_AUTH_SECRET` (new, secure value)
-- [ ] `BETTER_AUTH_URL` (your domain)
 - [ ] `NEXT_PUBLIC_APP_URL` (your domain)
 - [ ] `NEXT_PUBLIC_APP_NAME` (your app name)
-- [ ] `CONVEX_DEPLOYMENT` (production)
-- [ ] `NEXT_PUBLIC_CONVEX_URL` (production)
-- [ ] `NEXT_PUBLIC_CONVEX_SITE_URL` (production)
-- [ ] `PASSKEY_RP_ID` (your domain)
+- [ ] `NEXT_PUBLIC_CONVEX_URL` (production `.convex.cloud`)
+- [ ] `NEXT_PUBLIC_CONVEX_SITE_URL` (production `.convex.site`)
+- [ ] `AUTUMN_SECRET_KEY` (also on Convex)
+- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` (optional)
+- [ ] `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` (optional)
+
+**Convex deployment:**
+
+- [ ] `BETTER_AUTH_SECRET` (new, secure value)
+- [ ] `JWKS` (generated with `bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks --prod)" --prod`)
 - [ ] `RESEND_API_KEY` (production key)
 - [ ] `EMAIL_FROM` (verified domain)
-- [ ] `AUTUMN_API_KEY` (optional, required only for organization billing)
-- [ ] `JWKS` (generated with `bunx convex run betterAuth/auth:rotateKeys --prod | bunx convex env set JWKS --prod`)
-
-Optional:
-- [ ] Configure Sentry in code files (if using monitoring)
+- [ ] `AUTUMN_SECRET_KEY` (also on Vercel)
+- [ ] `PASSKEY_RP_ID` (your domain)
+- [ ] `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_APP_NAME`
 
 ## Continuous Deployment
 
-Vercel automatically redeploys when you push to your main branch:
+Vercel automatically redeploys when you push to your default branch:
 
 ```bash
 git add .
 git commit -m "Update feature"
-git push origin main
+git push origin HEAD
 ```
 
 Vercel will:
@@ -287,9 +304,9 @@ Preview deployments are created for pull requests automatically.
 ### Authentication Not Working
 
 **Verify**:
-- `BETTER_AUTH_SECRET` is set and different from dev
-- `BETTER_AUTH_URL` matches your actual URL
-- Convex environment variables match
+- `BETTER_AUTH_SECRET` is set on the Convex deployment and different from dev
+- `JWKS` is set on the production deployment
+- `NEXT_PUBLIC_APP_URL` matches your actual domain
 - Cookies are not blocked (HTTPS required)
 
 ### Emails Not Sending
