@@ -74,42 +74,40 @@ Organizations cannot add members until they are on the Pro plan.
 
 ### Configure Environment Variables
 
-Add your Autumn API key to Convex:
+Set `AUTUMN_SECRET_KEY` in **both** environments — the Next.js billing routes read
+it at runtime, and the Convex auth hooks read it too:
 
 ```bash
-npx convex env set AUTUMN_API_KEY "am_sk_your_api_key_here"
+# Convex deployment
+bunx convex env set AUTUMN_SECRET_KEY "am_sk_your_api_key_here"
 ```
 
-Also add to `.env.local`:
-
-```dotenv
-AUTUMN_API_KEY="am_sk_your_api_key_here"
+```dotenv title=".env.local"
+AUTUMN_SECRET_KEY="am_sk_your_api_key_here"
 ```
+
+<Callout type="error">
+Setting `AUTUMN_SECRET_KEY` in only one environment breaks billing: the checkout /
+portal routes 500 in the Next.js runtime, or seat syncing fails in the Convex
+hooks. Set it in both.
+</Callout>
 
 </Step>
 
 <Step>
 
-### Configure Your Product
+### Push Your Products
 
-In Autumn dashboard:
+Plans are defined **as code** in `autumn.config.ts` (a `free_plan` and a
+seat-metered `pro` plan). Push them to your Autumn account with the Autumn CLI:
 
-1. Create a **Product** (e.g., "Pro Plan")
-2. Set pricing model to **Per-seat**
-3. Configure the price per seat
-4. Set billing interval (monthly/yearly)
+```bash
+bunx atmn login          # authenticate the Autumn CLI
+bunx atmn push           # create the products from autumn.config.ts
+```
 
-</Step>
-
-<Step>
-
-### Set Up Webhooks (Optional)
-
-For real-time billing events:
-
-1. In Autumn, go to **Webhooks**
-2. Add your webhook endpoint: `https://yourdomain.convex.site/autumn-webhook`
-3. Select events to receive
+Edit `autumn.config.ts` to change the plans, price, or billing interval, then
+`bunx atmn push` again.
 
 </Step>
 
@@ -178,129 +176,37 @@ When a member is removed:
 | 10 | $100 |
 | 50 | $500 |
 
-## Implementation Details
+## How It's Wired Up
 
-### Checking Subscription Status
+Billing is integrated through **Better Auth organization hooks**, not a webhook
+endpoint. The key pieces:
 
-```typescript title="lib/utils/billing.ts"
-import { getAutumnCustomer } from "@/lib/autumn";
+- **`autumn.config.ts`** — the `free_plan` / `pro` product definitions, pushed with
+  `bunx atmn push`.
+- **`convex/betterAuth/auth.ts`** — `organizationHooks` call into the billing
+  integration:
+  - `afterCreateOrganization` initialises the Autumn customer for the org.
+  - `afterAcceptInvitation` / `afterRemoveMember` sync the seat count.
+  - `beforeCreateInvitation` / `beforeAddMember` / `beforeAcceptInvitation` gate on
+    a paid plan and throw `APIError("BAD_REQUEST", …)` if the org lacks one.
+- **`lib/autumn-server.ts`** — an SDK-free REST client used from the Convex runtime
+  (the `autumn-js` SDK is too large for Convex's 64 MB isolate).
+- **`lib/autumn.ts`** — the full `autumn-js` SDK, usable from Node server pages.
+- **`app/api/autumn/[...all]/route.ts`** — the Next.js billing route (checkout,
+  portal); it reads `AUTUMN_SECRET_KEY` at runtime in the Node runtime and is gated
+  to org owners/admins.
 
-export async function canAddMembers(organizationId: string): Promise<boolean> {
-  const customer = await getAutumnCustomer(organizationId);
-  return customer?.plan === "pro" && customer?.status === "active";
-}
-```
+<Callout type="info">
+Subscriptions are organization-scoped and billing is keyed per URL organization
+via the `x-organization-slug` header. If you add a flow that grows seat count or
+invites members, hook it into `organizationHooks` in `convex/betterAuth/auth.ts`.
+</Callout>
 
-### Gating Features by Plan
+## Billing Route
 
-```tsx title="components/organization/add-member-form.tsx"
-"use client";
-
-import { useOrganization } from "@/lib/hooks/use-organization";
-
-export function AddMemberForm({ organizationId }: { organizationId: string }) {
-  const { subscription } = useOrganization(organizationId);
-
-  if (subscription?.plan !== "pro") {
-    return (
-      <div className="text-center p-8">
-        <h3>Upgrade to Pro</h3>
-        <p>Add team members by upgrading to the Pro plan.</p>
-        <UpgradeButton organizationId={organizationId} />
-      </div>
-    );
-  }
-
-  return (
-    // Member invitation form
-  );
-}
-```
-
-### Organization-Scoped Customers
-
-Organizations are mapped to Autumn customers:
-
-```typescript
-// When organization is created
-await autumn.customers.create({
-  id: organization.id, // Use org ID as customer ID
-  email: owner.email,
-  name: organization.name,
-});
-
-// When upgrading
-await autumn.subscriptions.create({
-  customerId: organization.id,
-  productId: "pro-plan",
-  quantity: 1, // Initial seat for owner
-});
-
-// When adding member
-await autumn.subscriptions.update({
-  customerId: organization.id,
-  quantity: memberCount + 1,
-});
-```
-
-## Billing Routes
-
-| Route | Purpose |
-|-------|---------|
-| `/organizations/[slug]/billing` | Billing dashboard |
-| `/organizations/[slug]/billing/upgrade` | Upgrade to Pro |
-| `/organizations/[slug]/billing/portal` | Redirect to Autumn portal |
-
-## Handling Billing Events
-
-### Webhook Events
-
-Common Autumn webhook events:
-
-| Event | Description | Action |
-|-------|-------------|--------|
-| `subscription.created` | New subscription | Enable Pro features |
-| `subscription.updated` | Seats changed | Update member limits |
-| `subscription.canceled` | Plan canceled | Disable Pro features |
-| `payment.succeeded` | Payment processed | Send receipt email |
-| `payment.failed` | Payment failed | Notify organization owner |
-
-### Webhook Handler
-
-```typescript title="convex/http.ts"
-import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
-
-const http = httpRouter();
-
-http.route({
-  path: "/autumn-webhook",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
-    const signature = request.headers.get("x-autumn-signature");
-
-    // Verify webhook signature
-    if (!verifySignature(body, signature)) {
-      return new Response("Invalid signature", { status: 401 });
-    }
-
-    switch (body.event) {
-      case "subscription.created":
-        await handleSubscriptionCreated(ctx, body.data);
-        break;
-      case "subscription.canceled":
-        await handleSubscriptionCanceled(ctx, body.data);
-        break;
-      // ... handle other events
-    }
-
-    return new Response("OK", { status: 200 });
-  }),
-});
-
-export default http;
-```
+Organization owners and admins manage billing at
+`/organizations/[organizationSlug]/billing` (plan status, seats, upgrade, and the
+Autumn portal link).
 
 ## Removing Billing
 
@@ -312,7 +218,7 @@ If you don't need billing:
 
 ### Remove Environment Variable
 
-Remove `AUTUMN_API_KEY` from Convex and `.env.local`.
+Remove `AUTUMN_SECRET_KEY` from both the Convex deployment and `.env.local`.
 
 </Step>
 

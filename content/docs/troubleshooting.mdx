@@ -14,8 +14,8 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 Before diving into specific issues, try these first:
 
-1. **Restart the dev server**: Stop and restart `npm run dev`
-2. **Restart Convex**: Stop and restart `npx convex dev`
+1. **Restart the dev server**: Stop and restart `bun dev`
+2. **Restart Convex**: Stop and restart `bun convex dev`
 3. **Clear browser cookies**: Especially for auth issues
 4. **Check environment variables**: Ensure all are set correctly
 5. **Check Convex dashboard**: Look for errors in function logs
@@ -38,19 +38,21 @@ Before diving into specific issues, try these first:
 
 2. **Verify Convex connection**:
    ```bash
-   npx convex dev
+   bun convex dev
    ```
    Ensure Convex is running and connected.
 
-3. **Check `BETTER_AUTH_SECRET`**:
-   - Must be the same in `.env.local` and Convex
-   - Generate a new one if unsure:
+3. **Check `BETTER_AUTH_SECRET` and `JWKS`**:
+   - Both must be set on the **Convex** deployment
+   - `BETTER_AUTH_SECRET` — generate a new one if unsure:
    ```bash
    openssl rand -base64 32
    ```
+   - If you rotated `BETTER_AUTH_SECRET`, regenerate `JWKS` too (the private key is
+     encrypted with it)
 
-4. **Check `BETTER_AUTH_URL`**:
-   - Must match your actual URL
+4. **Check `NEXT_PUBLIC_APP_URL`**:
+   - Must match your actual URL (the runtime uses this, not `BETTER_AUTH_URL`)
    - For local: `http://localhost:3000`
    - For production: `https://yourdomain.com`
 
@@ -70,7 +72,7 @@ Before diving into specific issues, try these first:
 
 1. **Check cookie settings**:
    - Cookies require HTTPS in production
-   - Ensure `BETTER_AUTH_URL` uses correct protocol
+   - Ensure `NEXT_PUBLIC_APP_URL` uses the correct protocol
 
 2. **Verify secret consistency**:
    - `BETTER_AUTH_SECRET` must match everywhere
@@ -147,7 +149,7 @@ Before diving into specific issues, try these first:
 
 1. **Check Resend API key**:
    ```bash
-   npx convex env set RESEND_API_KEY "re_your_key"
+   bunx convex env set RESEND_API_KEY "re_your_key"
    ```
 
 2. **Verify `EMAIL_FROM`**:
@@ -200,7 +202,7 @@ Before diving into specific issues, try these first:
 
 1. **Check Convex is running**:
    ```bash
-   npx convex dev
+   bun convex dev
    ```
 
 2. **Verify Convex URLs**:
@@ -217,8 +219,8 @@ Before diving into specific issues, try these first:
 
 4. **Reinstall Convex**:
    ```bash
-   npm install convex
-   npx convex dev
+   bun add convex
+   bun convex dev
    ```
 
 ### Schema Errors
@@ -236,13 +238,13 @@ Before diving into specific issues, try these first:
 
 2. **Run type check**:
    ```bash
-   npx convex dev
+   bun convex dev
    ```
    Convex validates schema on startup.
 
 3. **Reset and redeploy**:
    ```bash
-   npx convex deploy --yes
+   bunx convex deploy --yes
    ```
 
 ### Function Errors
@@ -300,11 +302,11 @@ Before diving into specific issues, try these first:
 
 3. **Restart dev server**:
    - Environment changes require restart
-   - Stop and restart `npm run dev`
+   - Stop and restart `bun dev`
 
 4. **Set in Convex**:
    ```bash
-   npx convex env set VARIABLE_NAME "value"
+   bunx convex env set VARIABLE_NAME "value"
    ```
 
 5. **Check which env file is loaded**:
@@ -341,7 +343,7 @@ Before diving into specific issues, try these first:
 ### Build Fails
 
 **Symptoms:**
-- `npm run build` fails
+- `bun run build` fails
 - TypeScript errors
 - Module not found
 
@@ -349,19 +351,19 @@ Before diving into specific issues, try these first:
 
 1. **Check TypeScript errors**:
    ```bash
-   npx tsc --noEmit
+   bunx tsgo --noEmit
    ```
 
 2. **Install dependencies**:
    ```bash
    rm -rf node_modules
-   npm install
+   bun install
    ```
 
 3. **Clear Next.js cache**:
    ```bash
    rm -rf .next
-   npm run build
+   bun run build
    ```
 
 4. **Check import paths**:
@@ -378,7 +380,7 @@ Before diving into specific issues, try these first:
 
 2. **Match local build**:
    ```bash
-   npm run build
+   bun run build
    ```
    Fix any errors locally first.
 
@@ -397,7 +399,7 @@ Before diving into specific issues, try these first:
    - Email must be verified
 
 2. **Check Autumn is configured**:
-   - `AUTUMN_API_KEY` must be set
+   - `AUTUMN_SECRET_KEY` must be set
    - Or billing must be removed
 
 ### Can't Add Members

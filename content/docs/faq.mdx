@@ -28,7 +28,7 @@ Unstack Pro is a production-ready Next.js template with authentication, organiza
 
 | Technology | Purpose |
 |------------|---------|
-| Next.js 15 | React framework with App Router |
+| Next.js 16 | React framework with App Router |
 | React 19 | UI library |
 | Convex | Real-time database and backend |
 | Better Auth | Authentication (via [better-convex](https://better-convex.com)) |
@@ -323,7 +323,7 @@ Most common causes:
 
 1. `BETTER_AUTH_SECRET` mismatch between `.env.local` and Convex
 2. `BETTER_AUTH_URL` doesn't match your actual URL
-3. Convex isn't running (`npx convex dev`)
+3. Convex isn't running (`bun convex dev`)
 4. Cookies blocked by browser
 
 ### Emails aren't sending
@@ -339,7 +339,7 @@ Check:
 
 Verify:
 
-1. Convex is running (`npx convex dev`)
+1. Convex is running (`bun convex dev`)
 2. All three Convex URLs are correct
 3. Deployment exists in Convex dashboard
 
@@ -376,17 +376,23 @@ Report bugs with:
 
 ### Will I get updates?
 
-Yes. As a license holder, you have access to the repository and can pull updates.
+Yes. On purchase you're invited to the template repository
+(`unstack-pro/nextjs-convex`), so your own git credentials can fetch it. You pull
+ongoing fixes and features into your project with a single command.
 
 ### How do I update?
 
+Run the template-sync script from your repo root:
+
 ```bash
-git pull origin main
-npm install
-npx convex dev
+bun scripts/sync-template.ts
 ```
 
-Review the changelog for any breaking changes or migration steps.
+It fetches the template, previews the changelog, creates a sync branch, merges,
+then pushes and opens a pull request against your default branch. See the full
+[Template Updates](/template-updates) guide for flags (`--check-only`, `--no-pr`,
+`--auto-merge`) and conflict resolution. Review the changelog in the PR for any
+breaking changes before merging.
 
 ### Will updates break my customizations?
 
