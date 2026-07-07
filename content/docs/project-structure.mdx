@@ -61,6 +61,7 @@ app/auth/
 │   ├── page.tsx
 │   ├── loading.tsx
 │   └── _components/
+│       ├── register-card.tsx
 │       └── register-form.tsx
 └── forgot-password/
     ├── page.tsx
@@ -281,6 +282,7 @@ Reusable React components organized by category.
 
 ```
 components/auth/
+├── authenticated-client.tsx
 ├── change-password-form.tsx
 ├── controlled-email-input.tsx
 ├── controlled-input.tsx
@@ -304,13 +306,16 @@ components/auth/
 
 ```
 components/organization/
+├── active-org-syncer.tsx
 ├── add-member-card.tsx
 ├── add-member-form.tsx
 ├── add-member-to-team-dialog.tsx
 ├── create-organization-dialog.tsx
 ├── create-team-dialog.tsx
 ├── invite-member-dialog.tsx
+├── leave-organization-button.tsx
 ├── member-card.tsx
+├── my-information-card.tsx
 ├── organization-selector.tsx
 ├── organization-sidebar.tsx
 ├── role-multiselect.tsx
@@ -323,12 +328,20 @@ components/organization/
 
 ```
 components/ui/
+├── avatar.tsx
+├── badge.tsx
 ├── button.tsx
 ├── card.tsx
+├── checkbox.tsx
 ├── command.tsx
+├── data-table.tsx
 ├── dialog.tsx
 ├── dropdown-menu.tsx
+├── empty-state.tsx
+├── field.tsx
+├── form.tsx
 ├── input.tsx
+├── label.tsx
 ├── multi-select.tsx
 ├── popover.tsx
 ├── select.tsx
@@ -336,16 +349,32 @@ components/ui/
 ├── sheet.tsx
 ├── sidebar.tsx
 ├── skeleton.tsx
+├── spinner.tsx
 ├── table.tsx
+├── textarea.tsx
+├── toaster.tsx
 ├── tooltip.tsx
 └── visually-hidden.tsx
+```
+
+### Landing Components
+
+```
+components/landing/
+├── landing-nav.tsx         # Landing page navigation
+└── reveal.tsx              # Scroll reveal animation
 ```
 
 ### Other Components
 
 ```
 components/
+├── danger-zone.tsx
 ├── faq.tsx
+├── json-ld.tsx
+├── page-header.tsx
+├── react-scan.tsx
+├── theme-toggle.tsx
 └── user-dropdown.tsx
 ```
 
@@ -367,6 +396,7 @@ React Email templates for transactional emails.
 emails/
 ├── delete-account-verification.tsx
 ├── email-change-verification.tsx
+├── index.ts                # Template registry
 ├── organization-invitation-email.tsx
 ├── reset-password-email.tsx
 ├── signin-otp-email.tsx
@@ -385,13 +415,16 @@ Core application logic and utilities.
 
 ```
 lib/
+├── audit-log.ts            # Audit log helpers
 ├── auth-client.ts          # Better Auth client config
 ├── auth-helpers.ts         # Auth utility functions
 ├── auth-server.ts          # Better Auth server config
-├── autumn.ts               # Autumn SDK integration
+├── autumn-server.ts        # SDK-free Autumn REST client (safe for Convex)
+├── autumn.ts               # Autumn SDK integration (Node/Next.js only)
 ├── http-polyfills.ts       # HTTP polyfills
 ├── permissions.ts          # RBAC permissions
 ├── session.ts              # Session management
+├── use-preloaded-auth-query.ts # Preloaded authenticated query hook
 └── utils.ts                # General utilities
 ```
 
@@ -400,19 +433,13 @@ lib/
 ```
 lib/convex/
 ├── convex-provider.tsx     # Convex React provider
-├── query-client.tsx        # Query client setup
-├── rsc.tsx                 # React Server Components helpers
-└── server.ts               # Server-side Convex utilities
+└── query-client.tsx        # Query client setup
 ```
 
 ### Plugins
 
 ```
 lib/plugin/
-├── audit/                  # Audit logging plugin
-│   ├── client.ts
-│   ├── index.ts
-│   └── server.ts
 ├── overrides/              # Custom auth overrides
 │   ├── client.ts
 │   ├── index.ts
@@ -422,6 +449,8 @@ lib/plugin/
     ├── index.ts
     └── server.ts
 ```
+
+Audit logging comes from the `better-auth-audit` package, with helpers in `lib/audit-log.ts`.
 
 ### Hooks
 
@@ -441,8 +470,11 @@ lib/utils/
 ├── date.ts                 # Date formatting
 ├── download.ts             # File download utilities
 ├── organization.ts         # Org management utilities
+├── passkey-provider.ts     # Passkey provider metadata
+├── roles.ts                # Role helpers
 ├── string.ts               # String utilities
-└── toast.ts                # Toast notifications
+├── toast.ts                # Toast notifications
+└── user-agent.ts           # User agent parsing
 ```
 
 ## Schemas Directory (`/schemas`)
@@ -462,7 +494,9 @@ Build and utility scripts.
 scripts/
 ├── capture-demo.ts         # Playwright demo capture (bun run demo:capture)
 ├── compile-all-pages.ts    # Page compilation script
+├── debug-resend.ts         # Resend delivery debugging (needs RESEND_DEPLOY_KEY)
 ├── line-count.ts           # Line counting utility
+├── record-demo.ts          # Demo recording script
 ├── run-demo-node.ts        # Node runner for demo scripts
 ├── sync-template.ts        # Template update sync script
 └── view-file-tree.ts       # File tree visualization
@@ -503,7 +537,7 @@ types/
 ├── .env.local              # Local environment overrides
 ├── .env.sentry-build-plugin # Sentry build configuration
 ├── .gitignore              # Git ignore rules
-├── @useautumn-sdk.d.ts     # Autumn SDK type definitions
+├── .template-version       # Last synced template commit
 ├── autumn.config.ts        # Autumn configuration
 ├── biome.json              # Biome linting/formatting
 ├── components.json         # Shadcn/ui configuration
