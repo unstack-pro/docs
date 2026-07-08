@@ -108,11 +108,11 @@ emails/
 
 | Template | Purpose | When Sent |
 |----------|---------|-----------|
-| `verification-email` | Verify new user's email | After registration |
+| `verification-email` | Verify new user's email | After registration, and when a user changes their email (a 6-digit code is sent to the new address) |
 | `reset-password-email` | Password reset code | When user requests password reset |
 | `signin-otp-email` | OTP sign-in code | When user chooses OTP login |
 | `organization-invitation-email` | Invite to organization | When member is invited |
-| `email-change-verification` | Verify new email address | When user changes email |
+| `email-change-verification` | Verify new email address | Unused by default — kept as an example; email changes use the OTP flow via `verification-email` |
 | `delete-account-verification` | Confirm account deletion | When user initiates deletion |
 
 ## Customizing Email Templates
