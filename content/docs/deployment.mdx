@@ -7,23 +7,132 @@ icon: Rocket
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-**Deploy to production in minutes.** Auth is already configured just set your production environment variables and go live.
+**Deploy to production in minutes.** Auth is already configured — set your
+production environment variables and go live.
 
-<Callout type="info">
-No auth configuration needed for deployment. Just connect services with production credentials.
-</Callout>
+How many surfaces you configure depends on which edition you run. Pick yours
+with the switcher below — the choice is remembered across every page in these
+docs.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+One surface: your host's environment variables. Better Auth runs inside Next.js
+and talks to Postgres directly, so there is nothing else to populate.
+
+</Tab>
+
+<Tab value="Convex">
+
+Two surfaces: your host's environment variables for the Next.js side, and the
+Convex deployment environment for everything Better Auth itself reads.
+
+</Tab>
+
+</Tabs>
 
 ## Prerequisites
 
 Before deploying, ensure you have:
 
 - [ ] Completed local development setup
-- [ ] Convex account and project
 - [ ] Resend account for email sending
 - [ ] Autumn account for billing
 - [ ] Vercel account (free tier works)
 - [ ] Domain name (optional but recommended)
 - [ ] All environment variables documented
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- [ ] A production PostgreSQL database, separate from your development one, and
+  its connection string. Any provider works — the app connects with `pg`
+  (node-postgres), not a vendor-specific driver.
+
+</Tab>
+
+<Tab value="Convex">
+
+- [ ] A Convex account and project with a production deployment
+- [ ] A Convex **production deploy key**, for the build to push with
+
+</Tab>
+
+</Tabs>
+
+## The Build Command
+
+Both editions ship a `vercel.json` whose `buildCommand` **overrides** the Build
+Command field in the Vercel dashboard. Typing a command into that field has no
+effect — if you need to change what a deploy runs, edit `vercel.json`.
+
+<Callout type="warn">
+This is the step most first deploys get wrong. Leave the dashboard's Build
+Command on its default and read what `vercel.json` actually does below — the
+production and preview paths are deliberately different.
+</Callout>
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```json title="vercel.json"
+{
+    "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then bunx drizzle-kit migrate && bun run build; else bun run build; fi"
+}
+```
+
+**Production deploys** apply every pending migration in `drizzle/` to
+`DATABASE_URL` *before* building. `&&` means a failed migration aborts the
+deploy, so a broken migration never ships alongside the code that depends on it.
+
+**Preview deploys** skip the migrate step entirely and build against whatever
+schema the database they point at already has. If previews share one database,
+plan your migrations to be backward compatible — a preview built from a branch
+with new columns will run against a database that does not have them yet.
+
+**Self-hosting** (anywhere that is not Vercel) means nothing runs migrations for
+you. Apply them against the production `DATABASE_URL` before starting the new
+build:
+
+```bash
+bun run db:migrate
+bun run build
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+```json title="vercel.json"
+{
+    "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then bunx convex deploy --cmd 'bun run build'; else bun run build; fi"
+}
+```
+
+**Production deploys** run `convex deploy`, which pushes your functions and
+schema to the production Convex deployment and then runs the Next.js build with
+the production Convex URLs injected.
+
+**Preview deploys** only build — they do not push anything to Convex.
+
+<Callout type="error">
+`convex deploy` authenticates with a **`CONVEX_DEPLOY_KEY`** environment
+variable, which must be set in **Vercel** (not on the Convex deployment).
+Generate a production deploy key in the Convex dashboard under Settings → Deploy
+Keys and add it to your Vercel project. Without it, the production build fails
+at the deploy step — the preview builds that skip `convex deploy` will still
+succeed, which makes this easy to miss until your first production deploy.
+</Callout>
+
+</Tab>
+
+</Tabs>
+
+In both editions `bun run build` is `tsgo --noEmit && next build --turbopack`,
+so a type error fails the deploy.
 
 ## Deployment Steps
 
@@ -54,35 +163,77 @@ Before deploying, ensure you have:
 
 <Step>
 
-### Configure Convex for Production
+### Prepare the Production Backend
 
-1. **Go to your Convex dashboard**: [dashboard.convex.dev](https://dashboard.convex.dev)
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-2. **Create production deployment**:
-   - Click your project
-   - Go to "Settings"
-   - Note your production deployment name
+<Tab value="Postgres">
 
-3. **Set the Convex deployment environment variables** (the Section 2 vars from
-   [Environment Variables](/environment-variables)) — `BETTER_AUTH_SECRET`,
-   `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY`, `AUTUMN_SECRET_KEY`, `PASSKEY_RP_ID`,
-   `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_APP_NAME`:
-   - Use `bunx convex env set NAME "value" --prod`, or
-   - Go to "Settings" > "Environment Variables" tab in the dashboard and add them,
-     using production values (production domain for `NEXT_PUBLIC_APP_URL` and
-     `PASSKEY_RP_ID`)
-4. **Save changes**
+Create the production database at your provider and copy its connection string —
+most hosted providers require `?sslmode=require`. That string becomes
+`DATABASE_URL` in the next step.
 
+You do not have to run the migrations by hand: on Vercel, the production build
+applies them for you. If you want the schema in place before the first deploy,
+or you are self-hosting, run them yourself against the production URL:
+
+```bash
+DATABASE_URL="postgresql://…" bunx drizzle-kit migrate
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+1. Open the [Convex dashboard](https://dashboard.convex.dev), select your
+   project, and note the production deployment name under Settings.
+
+2. **Set the deployment-side variables** — `BETTER_AUTH_SECRET`, `EMAIL_FROM`,
+   `RESEND_API_KEY`, `AUTUMN_SECRET_KEY`, `PASSKEY_RP_ID`, `NEXT_PUBLIC_APP_URL`
+   and `NEXT_PUBLIC_APP_NAME` — with production values, either from Settings →
+   Environment Variables or with the CLI:
+
+   ```bash
+   bunx convex env set NAME "value" --prod
+   ```
+
+   `NEXT_PUBLIC_APP_URL` must be the `https://` production origin, and
+   `PASSKEY_RP_ID` the bare domain that serves it.
+
+3. **Push the functions** so `betterAuth/auth` exists on the production
+   deployment — `bunx convex deploy`, or let your first Vercel production deploy
+   do it.
+
+4. **Generate the production `JWKS`.** `BETTER_AUTH_SECRET` encrypts the private
+   key, so set that first:
+
+   ```bash
+   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks --prod)" --prod
+   ```
+
+   To rotate later:
+
+   ```bash
+   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:rotateKeys --prod)" --prod
+   ```
 
 <Callout type="warn">
-Use **different** secrets for production! Never reuse development secrets.
+Rotating JWKS logs out every existing user. Do it during low-traffic periods.
+</Callout>
+
+</Tab>
+
+</Tabs>
+
+<Callout type="warn">
+Use **different** secrets for production. Never reuse development secrets.
 </Callout>
 
 </Step>
 
 <Step>
 
-### Deploy to Vercel
+### Import the Project into Vercel
 
 1. **Go to** [vercel.com](https://vercel.com)
 
@@ -94,53 +245,67 @@ Use **different** secrets for production! Never reuse development secrets.
 3. **Configure project**:
    - **Framework Preset**: Next.js
    - **Root Directory**: `./`
-   - **Build Command**: `bun run build` (runs `tsgo --noEmit && next build --turbopack`)
+   - **Build Command**: leave it alone — `vercel.json` overrides it. See
+     [The Build Command](#the-build-command).
    - **Output Directory**: `.next`
 
-4. **Add environment variables** (the **Next.js** side — see the Section 1 vars in
-   [Environment Variables](/environment-variables)):
+</Step>
 
-   Go to "Environment Variables" and add your production values:
-   - `NEXT_PUBLIC_APP_URL`: Your production domain
-   - `NEXT_PUBLIC_APP_NAME`: Your application name
-   - `NEXT_PUBLIC_CONVEX_URL`: Production Convex URL (`….convex.cloud`)
-   - `NEXT_PUBLIC_CONVEX_SITE_URL`: Production Convex site URL (`….convex.site`)
-   - `NEXT_PUBLIC_SUPPORT_EMAIL`: Support address (optional)
-   - `AUTUMN_SECRET_KEY`: Autumn secret key — **also** required on the Convex
-     deployment (the Next.js billing routes read it here at runtime)
-   - `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`:
-     Sentry (optional — leave unset to disable)
+<Step>
+
+### Add Environment Variables
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Everything goes in the Vercel project's environment variables — there is no
+second surface:
+
+- `DATABASE_URL` — the production connection string
+- `NEXT_PUBLIC_APP_URL` — your production domain, on `https://`
+- `NEXT_PUBLIC_APP_NAME` — your application name
+- `BETTER_AUTH_SECRET` — a **new** value, not the development one
+- `EMAIL_FROM` — a sender on your verified Resend domain
+- `RESEND_API_KEY` — production key
+- `AUTUMN_SECRET_KEY` — production Autumn key
+- `PASSKEY_RP_ID` — the bare deployed domain: no scheme, no port
+- `NEXT_PUBLIC_SUPPORT_EMAIL` — optional
+- `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`,
+  `SENTRY_AUTH_TOKEN` — optional, leave unset to disable Sentry
+
+</Tab>
+
+<Tab value="Convex">
+
+Only the Next.js side goes in Vercel; the rest was set on the Convex deployment
+in the previous step.
+
+- `CONVEX_DEPLOY_KEY` — the production deploy key, required by the build
+- `NEXT_PUBLIC_APP_URL` — your production domain, on `https://`
+- `NEXT_PUBLIC_APP_NAME` — your application name
+- `NEXT_PUBLIC_CONVEX_URL` — production Convex URL (`….convex.cloud`)
+- `NEXT_PUBLIC_CONVEX_SITE_URL` — production Convex site URL (`….convex.site`)
+- `AUTUMN_SECRET_KEY` — **also** required on the Convex deployment; the Next.js
+  billing routes read it here at runtime
+- `NEXT_PUBLIC_SUPPORT_EMAIL`, `NEXT_PUBLIC_PURCHASE_URL` — optional
+- `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`,
+  `SENTRY_AUTH_TOKEN` — optional, leave unset to disable Sentry
 
 <Callout type="info">
-`BETTER_AUTH_SECRET`, `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY`, `PASSKEY_RP_ID` and
-`AUTUMN_SECRET_KEY` also live on the **Convex** deployment (set in the previous
-step), not just on Vercel. `AUTUMN_SECRET_KEY` is needed in both.
+`BETTER_AUTH_SECRET`, `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY` and
+`PASSKEY_RP_ID` live on the **Convex** deployment, not on Vercel.
+`AUTUMN_SECRET_KEY` is the one variable needed in both places.
 </Callout>
 
-5. **Generate JWKS keys for the production deployment** (once functions are
-   pushed):
-   ```bash
-   # Initial key set
-   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks --prod)" --prod
-   ```
+</Tab>
 
-   To rotate later:
-   ```bash
-   bunx convex env set JWKS "$(bunx convex run betterAuth/auth:rotateKeys --prod)" --prod
-   ```
+</Tabs>
 
-<Callout type="warn">
-JWKS key rotation will log out all existing users. Run rotation during low-traffic periods.
-</Callout>
+`PASSKEY_RP_ID` and `NEXT_PUBLIC_APP_URL` must agree: the former is the bare
+domain, the latter the matching `https://` origin.
 
-<Callout type="info">
-**Prerequisite**: run `bunx convex deploy` (or `bun convex dev` at least once) to push the `betterAuth/auth` functions to your production deployment before running these commands.
-</Callout>
-
-6. **Deploy**:
-   - Click "Deploy"
-   - Wait for build to complete (2-3 minutes)
-   - Vercel will provide a URL
+Then **Deploy**, and wait for the build to finish.
 
 </Step>
 
@@ -153,17 +318,37 @@ JWKS key rotation will log out all existing users. Run rotation during low-traff
    - Add your domain
    - Follow DNS instructions
 
-2. **Update environment variables** (Vercel + Convex):
+2. **Update the app's environment variables**:
    ```dotenv
    NEXT_PUBLIC_APP_URL=https://yourdomain.com
    PASSKEY_RP_ID=yourdomain.com
    ```
 
-3. **Update the Convex deployment**:
-   ```bash
-   bunx convex env set NEXT_PUBLIC_APP_URL "https://yourdomain.com" --prod
-   bunx convex env set PASSKEY_RP_ID "yourdomain.com" --prod
-   ```
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Both live in Vercel. Redeploy afterwards — `NEXT_PUBLIC_*` values are inlined at
+build time, so an edit alone does not reach the running app.
+
+</Tab>
+
+<Tab value="Convex">
+
+`NEXT_PUBLIC_APP_URL` has to be updated in Vercel **and** on the Convex
+deployment, and `PASSKEY_RP_ID` on the Convex deployment, where Better Auth
+reads it:
+
+```bash
+bunx convex env set NEXT_PUBLIC_APP_URL "https://yourdomain.com" --prod
+bunx convex env set PASSKEY_RP_ID "yourdomain.com" --prod
+```
+
+Redeploy afterwards — `NEXT_PUBLIC_*` values are inlined at build time.
+
+</Tab>
+
+</Tabs>
 
 <Callout type="info">
 DNS changes can take up to 48 hours but usually propagate within minutes.
@@ -182,10 +367,25 @@ DNS changes can take up to 48 hours but usually propagate within minutes.
    - Test OTP login
    - Try passkey (if on HTTPS)
 
-3. **Check Convex**:
-   - Go to Convex dashboard
-   - Verify data is being created
-   - Check production deployment logs
+3. **Confirm the data landed and check the logs**:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Query the production database (`select * from "user";`) or open your provider's
+table browser, and read the build log to confirm the migrate step ran.
+
+</Tab>
+
+<Tab value="Convex">
+
+Open the Convex dashboard, watch the `user` table fill in, and check the
+production deployment logs.
+
+</Tab>
+
+</Tabs>
 
 4. **Test key features**:
    - Create organization
@@ -218,19 +418,34 @@ If using Autumn for payments:
 
 1. Set up an Autumn account and run `bunx atmn push` against your live account
 2. Get your production secret key (starts with `am_sk_`)
-3. Add `AUTUMN_SECRET_KEY` to **both** Vercel and the Convex deployment
+3. Set `AUTUMN_SECRET_KEY` where the edition needs it
 4. Test the checkout and portal flows
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+One place — your host's environment. The billing routes
+(`app/api/autumn/[...all]/route.ts`) read it at runtime.
+
+</Tab>
+
+<Tab value="Convex">
+
 <Callout type="error">
-`AUTUMN_SECRET_KEY` must be set on **both** Vercel (the Next.js billing routes read
-it at runtime) and the Convex deployment (the auth hooks read it). Missing it in
-either place breaks billing.
+`AUTUMN_SECRET_KEY` must be set on **both** Vercel (the Next.js billing routes
+read it at runtime) and the Convex deployment (the auth hooks read it for seat
+syncing and the plan gate). Missing it in either place breaks billing.
 </Callout>
+
+</Tab>
+
+</Tabs>
 
 ### Set Up Monitoring (Optional)
 
-Sentry is **environment-variable driven** — no code changes are needed. Set these
-in Vercel to enable it:
+Sentry is **environment-variable driven** — no code changes are needed. Set
+these in Vercel to enable it:
 
 - `NEXT_PUBLIC_SENTRY_DSN` — your Sentry project DSN (when empty, Sentry is disabled)
 - `SENTRY_ORG`, `SENTRY_PROJECT` — used at build time
@@ -243,29 +458,56 @@ and builds skip source-map upload when `SENTRY_AUTH_TOKEN` is missing.
 
 ## Environment Variables Checklist
 
-**Vercel (Next.js runtime):**
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-- [ ] `NEXT_PUBLIC_APP_URL` (your domain)
+<Tab value="Postgres">
+
+Vercel (or your host's environment) — the only surface:
+
+- [ ] `DATABASE_URL` (production database)
+- [ ] `NEXT_PUBLIC_APP_URL` (your domain, `https://`)
+- [ ] `NEXT_PUBLIC_APP_NAME` (your app name)
+- [ ] `BETTER_AUTH_SECRET` (new, secure value)
+- [ ] `EMAIL_FROM` (verified domain)
+- [ ] `RESEND_API_KEY` (production key)
+- [ ] `AUTUMN_SECRET_KEY` (production key)
+- [ ] `PASSKEY_RP_ID` (your bare domain)
+- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` (optional)
+- [ ] `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` (optional)
+
+</Tab>
+
+<Tab value="Convex">
+
+Vercel (Next.js runtime and build):
+
+- [ ] `CONVEX_DEPLOY_KEY` (production deploy key — the build fails without it)
+- [ ] `NEXT_PUBLIC_APP_URL` (your domain, `https://`)
 - [ ] `NEXT_PUBLIC_APP_NAME` (your app name)
 - [ ] `NEXT_PUBLIC_CONVEX_URL` (production `.convex.cloud`)
 - [ ] `NEXT_PUBLIC_CONVEX_SITE_URL` (production `.convex.site`)
 - [ ] `AUTUMN_SECRET_KEY` (also on Convex)
-- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` (optional)
+- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL`, `NEXT_PUBLIC_PURCHASE_URL` (optional)
 - [ ] `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` (optional)
 
-**Convex deployment:**
+Convex deployment:
 
 - [ ] `BETTER_AUTH_SECRET` (new, secure value)
 - [ ] `JWKS` (generated with `bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks --prod)" --prod`)
 - [ ] `RESEND_API_KEY` (production key)
 - [ ] `EMAIL_FROM` (verified domain)
 - [ ] `AUTUMN_SECRET_KEY` (also on Vercel)
-- [ ] `PASSKEY_RP_ID` (your domain)
+- [ ] `PASSKEY_RP_ID` (your bare domain)
 - [ ] `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_APP_NAME`
+
+</Tab>
+
+</Tabs>
 
 ## Continuous Deployment
 
-Vercel automatically redeploys when you push to your default branch:
+Vercel redeploys automatically when you push to your default branch, and creates
+a preview deployment for every pull request.
 
 ```bash
 git add .
@@ -273,16 +515,29 @@ git commit -m "Update feature"
 git push origin HEAD
 ```
 
-Vercel will:
-1. Detect the push
-2. Start new build
-3. Run tests (if configured)
-4. Deploy automatically
-5. Notify you of status
+What that push runs is decided by `vercel.json`, and production and preview take
+different paths:
 
-<Callout type="info">
-Preview deployments are created for pull requests automatically.
-</Callout>
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+A push to the default branch migrates `DATABASE_URL`, then builds. A pull-request
+preview only builds — so a PR that adds a column runs against a database that
+does not have it yet unless the migration has already been applied to whatever
+database that preview points at.
+
+</Tab>
+
+<Tab value="Convex">
+
+A push to the default branch runs `convex deploy` — pushing functions and schema
+to the production deployment — and then builds. A pull-request preview only
+builds, against whichever Convex deployment its `NEXT_PUBLIC_CONVEX_URL` names.
+
+</Tab>
+
+</Tabs>
 
 ## Troubleshooting
 
@@ -291,21 +546,53 @@ Preview deployments are created for pull requests automatically.
 **Check**:
 - Build logs in Vercel dashboard
 - All dependencies in `package.json`
-- TypeScript errors locally
+- TypeScript errors locally — `bun run build` type-checks before it builds
 - Environment variables set correctly
 
-**Common issues**:
-- Missing environment variables
-- TypeScript errors
-- Dependency conflicts
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+If the log fails before the Next.js build even starts, it is the migrate step:
+`DATABASE_URL` is unreachable from the build, or a migration errored. The `&&`
+is doing its job — fix the migration rather than removing it.
+
+</Tab>
+
+<Tab value="Convex">
+
+A production build that fails at `convex deploy` with an authentication error is
+missing `CONVEX_DEPLOY_KEY` in Vercel. Preview builds skip that step, so they
+keep passing while production fails.
+
+</Tab>
+
+</Tabs>
 
 ### Authentication Not Working
 
 **Verify**:
-- `BETTER_AUTH_SECRET` is set on the Convex deployment and different from dev
-- `JWKS` is set on the production deployment
 - `NEXT_PUBLIC_APP_URL` matches your actual domain
 - Cookies are not blocked (HTTPS required)
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- `BETTER_AUTH_SECRET` is set in the host environment and different from dev
+- Every migration in `drizzle/` has been applied to the production database
+
+</Tab>
+
+<Tab value="Convex">
+
+- `BETTER_AUTH_SECRET` is set on the production Convex deployment and different
+  from dev
+- `JWKS` is set on the production deployment
+
+</Tab>
+
+</Tabs>
 
 ### Emails Not Sending
 
@@ -316,6 +603,9 @@ Preview deployments are created for pull requests automatically.
 - DNS records are configured
 - Check Resend logs
 
+In the Convex edition both variables belong on the Convex deployment — email is
+sent from there, not from Next.js.
+
 ### Passkeys Not Working
 
 **Ensure**:
@@ -324,16 +614,34 @@ Preview deployments are created for pull requests automatically.
 - Domain doesn't have port number
 - Browser supports WebAuthn
 
-### Database Connection Issues
+### The App Can't Reach Its Data
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
 
 **Verify**:
-- Convex deployment is active
-- All three Convex URLs are correct
-- Convex environment variables set
-- Check Convex dashboard logs
+- `DATABASE_URL` is set in the host environment and reachable from it
+- The connection string carries `?sslmode=require` if your provider needs it
+- The provider's connection limit is not exhausted
+- The migrations actually ran — check the build log
+
+</Tab>
+
+<Tab value="Convex">
+
+**Verify**:
+- The production Convex deployment is active
+- `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` are the production
+  URLs and point at the same deployment
+- Convex deployment environment variables are set
+- Check the Convex dashboard logs
+
+</Tab>
+
+</Tabs>
 
 ## Performance Optimization
-
 
 ### Optimize Images
 
@@ -363,21 +671,49 @@ import Image from 'next/image';
 
 ## Scaling
 
-Unstack Pro scales automatically on Vercel and Convex:
+The Next.js side scales automatically on Vercel — serverless functions grow with
+traffic and there is no infrastructure to manage.
 
-- **Serverless Functions**: Auto-scale with traffic
-- **Convex**: Scales automatically
-- **No Infrastructure**: Fully managed
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Your database is the part that does not auto-scale. Serverless functions open
+connections independently, so watch your provider's connection limit and use its
+pooled connection string if it offers one.
+
+</Tab>
+
+<Tab value="Convex">
+
+Convex scales on its own — there is nothing to size or tune.
+
+</Tab>
+
+</Tabs>
 
 ## Backup Strategy
 
 ### Database Backups
 
-Convex automatically backs up your data. To export:
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-1. Go to Convex dashboard
-2. Settings → Export
-3. Download backup
+<Tab value="Postgres">
+
+Backups are your provider's feature — enable point-in-time recovery or scheduled
+snapshots there. For an ad-hoc dump, `pg_dump` against `DATABASE_URL` works like
+any other Postgres database.
+
+</Tab>
+
+<Tab value="Convex">
+
+Convex backs up your data automatically. To export a copy, open the dashboard,
+go to Settings → Export, and download the backup.
+
+</Tab>
+
+</Tabs>
 
 ### Code Backups
 
@@ -396,13 +732,29 @@ Enable in Vercel dashboard for:
 - Performance metrics
 - User analytics
 
-### Convex Logs
+### Backend Logs
 
-Monitor in Convex dashboard:
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Server-side errors surface in Vercel's function logs, since auth and data access
+both run inside Next.js. Slow-query and connection metrics come from your
+database provider's dashboard.
+
+</Tab>
+
+<Tab value="Convex">
+
+Monitor in the Convex dashboard:
 - Function calls
 - Error rates
 - Performance
 - Data changes
+
+</Tab>
+
+</Tabs>
 
 ### Sentry (Optional)
 
@@ -417,11 +769,27 @@ For error tracking:
 If issues persist:
 
 1. Check [Vercel Docs](https://vercel.com/docs)
-2. Check [Convex Docs](https://docs.convex.dev)
-3. Check [better-convex Docs](https://better-convex.com/docs) - Our Better Auth + Convex integration
-4. Check [Better Auth Docs](https://www.better-auth.com/docs)
-5. Review GitHub issues
-6. Contact support
+2. Check [Better Auth Docs](https://www.better-auth.com/docs)
+3. Review GitHub issues
+4. Contact support
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview)
+- [drizzle-kit migrations](https://orm.drizzle.team/docs/kit-overview)
+
+</Tab>
+
+<Tab value="Convex">
+
+- [Convex Docs](https://docs.convex.dev)
+- [kitcn](https://kitcn.dev) — the Better Auth + Convex integration
+
+</Tab>
+
+</Tabs>
 
 ## Next Steps
 
