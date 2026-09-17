@@ -15,60 +15,114 @@ The package manager is **[Bun](https://bun.sh)**. All commands use `bun` — do 
 substitute `npm` or `pnpm`.
 </Callout>
 
-## What You're Setting Up
+## Choose Your Edition
 
-You're not configuring auth — that's already done. You're just:
+Unstack Pro ships in two editions. Pick one with the switcher below — your choice
+is remembered and follows you across every page in these docs.
 
-1. Installing dependencies and starting Convex (auth runs *inside* Convex)
-2. Setting the Next.js environment (`.env.local`)
-3. Setting the Convex deployment environment
-4. Generating the JWKS signing keys
-5. Wiring up Autumn billing
-6. Running the app
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-## Prerequisites
+<Tab value="Postgres">
 
-You'll need accounts on the following services (all have free tiers):
+Better Auth runs **inside Next.js** and talks to PostgreSQL through Drizzle ORM.
+There is a single environment surface — `.env.local` — one process to run, and
+schema changes are applied as SQL migrations.
 
-- **[Bun](https://bun.sh)** — the package manager and runtime.
-- **[Convex](https://convex.dev)** — real-time database + backend. Auth runs *inside* Convex.
-- **[Resend](https://resend.com)** — transactional email (verification, OTP, invitations). You'll need an API key and a verified sender.
-- **[Autumn](https://useautumn.com)** — organization-scoped subscription billing.
-- *(Optional)* **[Sentry](https://sentry.io)** — error monitoring. The app runs fine without it.
+</Tab>
 
-## Installation
+<Tab value="Convex">
+
+Better Auth runs **inside Convex**. There are two environment surfaces —
+`.env.local` for Next.js, and the Convex deployment environment — and two
+processes to run during development.
+
+</Tab>
+
+</Tabs>
+
+## Setup
 
 <Steps>
 
 <Step>
 
-### Clone the Repository
+### Prerequisites
+
+You'll need accounts on the following services (all have free tiers):
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- **[Bun](https://bun.sh)** — the package manager and runtime.
+- **A PostgreSQL database** — any provider works. The app connects with `pg`
+  (node-postgres) rather than a vendor-specific driver, so
+  [Neon](https://neon.tech) and [Supabase](https://supabase.com) are convenient
+  recommendations, not requirements; a Postgres you run yourself is equally fine.
+- **[Resend](https://resend.com)** — transactional email (verification, OTP,
+  invitations). You'll need an API key and a verified sender.
+- **[Autumn](https://useautumn.com)** — organization-scoped subscription billing.
+- *(Optional)* **[Sentry](https://sentry.io)** — error monitoring. The app runs
+  fine without it.
+
+</Tab>
+
+<Tab value="Convex">
+
+- **[Bun](https://bun.sh)** — the package manager and runtime.
+- **[Convex](https://convex.dev)** — real-time database + backend. Auth runs
+  *inside* Convex.
+- **[Resend](https://resend.com)** — transactional email (verification, OTP,
+  invitations). You'll need an API key and a verified sender.
+- **[Autumn](https://useautumn.com)** — organization-scoped subscription billing.
+- *(Optional)* **[Sentry](https://sentry.io)** — error monitoring. The app runs
+  fine without it.
+
+</Tab>
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Get the code
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The Postgres-edition template repository is not published yet; the Convex edition
+is the one distributed today.
+
+</Tab>
+
+<Tab value="Convex">
 
 ```bash
 git clone https://github.com/unstack-pro/nextjs-convex.git  # Purchasing grants access to the private repo
 cd nextjs-convex
 ```
 
+</Tab>
+
+</Tabs>
+
 </Step>
 
 <Step>
 
-### Install and Start Convex
+### Install
 
 ```bash
 bun install
-bun convex dev          # in a dedicated terminal — keep it running
 ```
-
-The first `bun convex dev` run logs you into Convex, creates a deployment, and
-pushes the schema/functions. It also writes `CONVEX_DEPLOYMENT` and the Convex
-URLs into `.env.local`. **Leave it running throughout development.**
 
 </Step>
 
 <Step>
 
-### Configure the Next.js Environment (`.env.local`)
+### Configure environment
 
 Copy the example file and fill in your values. See
 [Environment Variables](/environment-variables) for the full reference.
@@ -76,6 +130,35 @@ Copy the example file and fill in your values. See
 ```bash
 cp .env.example .env.local
 ```
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`.env.local` is the only place configuration lives — there is no second
+deployment environment to populate.
+
+```dotenv title=".env.local"
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
+
+# openssl rand -base64 32
+BETTER_AUTH_SECRET="replace-me"
+
+EMAIL_FROM="Unstack Pro <noreply@yourdomain.com>"
+RESEND_API_KEY="re_..."
+AUTUMN_SECRET_KEY="am_sk_..."
+PASSKEY_RP_ID="localhost"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+`.env.local` holds the Next.js side only. The secrets Better Auth itself reads
+live on the Convex deployment and are set in the next step.
 
 ```dotenv title=".env.local"
 # Printed by `bun convex dev` (….convex.cloud) — swap .cloud for .site for the site URL
@@ -85,31 +168,67 @@ NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_NAME="Unstack Pro"
 
-# Required in BOTH the Next.js env AND the Convex deployment (step 5)
+# Required in BOTH the Next.js env AND the Convex deployment
 AUTUMN_SECRET_KEY="am_sk_..."
 ```
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
 <Step>
 
-### Configure the Convex Deployment Environment
+### Set up the database
 
-These live on the **Convex deployment**, not in `.env.local`. Set each with
-`bunx convex env set NAME "value"` (or via the Convex dashboard):
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
 
 ```bash
-# Random secret — set this BEFORE generating JWKS (next step)
+bun run db:migrate
+```
+
+That applies the SQL migrations in `drizzle/` to `DATABASE_URL`, creating the
+Better Auth tables and the app tables.
+
+<Callout type="warn">
+`drizzle-kit` does not load `.env.local`, so run bare it sees `DATABASE_URL` as
+undefined. Export the file into the shell first:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+</Callout>
+
+</Tab>
+
+<Tab value="Convex">
+
+```bash
+bun convex dev          # in a dedicated terminal — keep it running
+```
+
+The first run logs you into Convex, creates a deployment, and pushes the
+schema/functions. It also writes `CONVEX_DEPLOYMENT` and the Convex URLs into
+`.env.local`. **Leave it running throughout development.**
+
+With the deployment up, set the deployment-side variables. These do *not* live in
+`.env.local` — set each with `bunx convex env set NAME "value"` (or via the Convex
+dashboard):
+
+```bash
+# Set this before generating JWKS in the next step
 bunx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 
-# Email
 bunx convex env set RESEND_API_KEY "re_..."
 bunx convex env set EMAIL_FROM "Unstack Pro <noreply@yourdomain.com>"
 
-# Billing (also required in .env.local)
+# Also required in .env.local
 bunx convex env set AUTUMN_SECRET_KEY "am_sk_..."
 
-# Passkeys + app identity (same values as .env.local)
+# Same values as .env.local
 bunx convex env set PASSKEY_RP_ID "localhost"
 bunx convex env set NEXT_PUBLIC_APP_URL "http://localhost:3000"
 bunx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
@@ -120,16 +239,31 @@ bunx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
 missing.
 </Callout>
 
+</Tab>
+
+</Tabs>
+
 </Step>
 
 <Step>
 
-### Generate the JWKS Signing Keys
+### Generate signing keys
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Nothing to generate. Better Auth runs inside Next.js and issues its own sessions,
+so there is no key pair and no `JWKS` variable.
+
+</Tab>
+
+<Tab value="Convex">
 
 Better Auth signs the Convex JWTs with an **RS256** key pair.
 `convex/auth.config.ts` reads the *public* key set from the `JWKS` env var, and
-Better Auth signs with the stored *private* key (encrypted with
-`BETTER_AUTH_SECRET`, so set that first).
+Better Auth signs with the stored *private* key — which is encrypted with
+`BETTER_AUTH_SECRET`, so that must already be set.
 
 With `bun convex dev` running (so the functions are deployed):
 
@@ -144,19 +278,23 @@ Set the output as the `JWKS` env var. On macOS/Linux, one step:
 bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks)"
 ```
 
-On Windows, copy the printed JSON array and paste it into
-`bunx convex env set JWKS '…'`.
+On Windows, copy the printed JSON array and paste it into the same command in
+place of the substitution.
 
 <Callout type="warn">
 To rotate keys later, run `bunx convex run betterAuth/auth:rotateKeys` and set the
 result as `JWKS` again — **this logs out all users**.
 </Callout>
 
+</Tab>
+
+</Tabs>
+
 </Step>
 
 <Step>
 
-### Configure Autumn Billing
+### Configure Autumn billing
 
 Subscriptions are defined in `autumn.config.ts` (a `free_plan` and a seat-metered
 `pro` plan). Push them to your Autumn account and wire up the secret key:
@@ -166,27 +304,114 @@ bunx atmn login          # authenticate the Autumn CLI
 bunx atmn push           # create the products from autumn.config.ts
 ```
 
-Then set `AUTUMN_SECRET_KEY` in **both** `.env.local` and on the Convex deployment
-(steps 3 and 4) using the key from the Autumn dashboard.
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Then set `AUTUMN_SECRET_KEY` in `.env.local` using the key from the Autumn
+dashboard.
+
+</Tab>
+
+<Tab value="Convex">
+
+Then set `AUTUMN_SECRET_KEY` in **both** `.env.local` and on the Convex
+deployment, using the key from the Autumn dashboard — the Next.js billing routes
+and the Convex auth hooks each read it.
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
 <Step>
 
-### Run the App
+### Passkeys
+
+`PASSKEY_RP_ID` must be the **bare public domain** that serves the app — no
+scheme, no port. For local development that is `localhost`. In production it must
+exactly match your deployed domain, and `NEXT_PUBLIC_APP_URL` must be the
+matching `https://` origin.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Set it in `.env.local`:
+
+```dotenv
+PASSKEY_RP_ID="localhost"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Set it on the Convex deployment, where Better Auth reads it:
+
+```bash
+bunx convex env set PASSKEY_RP_ID "localhost"
+```
+
+</Tab>
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Run the app
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```bash
+bun dev                  # Next.js dev server (Turbopack)
+```
+
+Open [http://localhost:3000](http://localhost:3000). 🎉
+
+</Tab>
+
+<Tab value="Convex">
 
 ```bash
 bun dev                  # Next.js dev server (Turbopack)
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Keep `bun convex dev` running
-in its own terminal. 🎉
+in its own terminal — the app does not function without it. 🎉
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
 </Steps>
 
 ## Commands
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```bash
+bun dev                  # Next dev server (turbopack)
+bun run build            # tsgo --noEmit && next build --turbopack
+bun run db:generate      # drizzle-kit generate (SQL migration from the schema)
+bun run db:migrate       # drizzle-kit migrate (apply to DATABASE_URL)
+bun run auth:schema      # regenerate lib/db/auth-schema.ts from lib/auth.ts
+bun run lint             # biome lint .
+bun run format           # biome format --write .
+```
+
+</Tab>
+
+<Tab value="Convex">
 
 ```bash
 bun dev                  # Next dev server (turbopack)
@@ -196,25 +421,64 @@ bun run lint             # biome lint .
 bun run format           # biome format --write .
 ```
 
+</Tab>
+
+</Tabs>
+
 ## Verify Installation
 
 1. **Visit the homepage**: navigate to `http://localhost:3000`
 2. **Register an account**: create a test account and complete email verification
-3. **Check the Convex dashboard**: confirm data is being created
+3. **Confirm the data landed**: check that your user row was created
 4. **Explore features**: log in, create an organization, invite a member
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+For step 3, query the database directly (`select * from "user";` against
+`DATABASE_URL`) or open your provider's table browser.
+
+</Tab>
+
+<Tab value="Convex">
+
+For step 3, open the Convex dashboard and watch the `user` table fill in.
+
+</Tab>
+
+</Tabs>
 
 ## Next Steps
 
 - 📖 **[Authentication](/authentication)** — understand the auth system
 - 🏢 **[Organizations](/organizations)** — multi-tenant features
 - 🔧 **[Environment Variables](/environment-variables)** — complete configuration
+- 🗄️ **[Database Schema](/database-schema)** — where the schema and
+  migration workflow are covered
 - 🏗️ **[Project Structure](/project-structure)** — understand the codebase
 - 🔄 **[Template Updates](/template-updates)** — pull ongoing template fixes
 - 🚀 **[Deployment](/deployment)** — get ready for production
 
 ## Common Issues
 
-### Convex Connection Issues
+### The App Can't Reach Its Data
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Check that `DATABASE_URL` is reachable from where you're running the app (most
+hosted providers require `?sslmode=require`), and that the migrations have
+actually been applied:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+
+</Tab>
+
+<Tab value="Convex">
 
 Make sure your Convex dev server is running:
 
@@ -222,20 +486,64 @@ Make sure your Convex dev server is running:
 bun convex dev
 ```
 
+</Tab>
+
+</Tabs>
+
 ### Environment Variable Not Found
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
 Double-check that:
+
 - `.env.local` exists in the root directory
-- Convex-side variables are set via `bunx convex env set` (or the dashboard)
+- The dev server was restarted after you edited it
+- `drizzle-kit` commands were given `DATABASE_URL` explicitly — they do not read
+  `.env.local`
+
+</Tab>
+
+<Tab value="Convex">
+
+Double-check that:
+
+- `.env.local` exists in the root directory
+- Convex-side variables are set via `bunx convex env set` (or the dashboard);
+  putting them in `.env.local` does not reach the deployment
 - If Convex throws that a variable is missing, consult `createAuthOptions` in
   `convex/betterAuth/auth.ts`
 
+</Tab>
+
+</Tabs>
+
 ### Authentication Errors
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
 Ensure:
+
+- `BETTER_AUTH_SECRET` is set in `.env.local`
+- `NEXT_PUBLIC_APP_URL` matches your dev URL
+- Every migration in `drizzle/` has been applied
+
+</Tab>
+
+<Tab value="Convex">
+
+Ensure:
+
 - `BETTER_AUTH_SECRET` and `JWKS` are set on the Convex deployment
 - `NEXT_PUBLIC_APP_URL` matches your dev URL
 - `bun convex dev` is running
+
+</Tab>
+
+</Tabs>
 
 <Callout type="warn">
 Never commit your `.env.local` file to version control. It contains sensitive secrets.

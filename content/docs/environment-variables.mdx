@@ -5,19 +5,37 @@ icon: Settings
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
-import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
-Unstack Pro reads configuration from **two separate places**:
+How many places you configure depends on which edition you run. Pick yours with
+the switcher below — the choice is remembered across every page in these docs.
 
-1. **The Next.js environment** — `.env.local` in local development, or your host's
-   environment variables (e.g. Vercel) in production.
-2. **The Convex deployment environment** — set with `bunx convex env set NAME "value"`
-   or from the Convex dashboard → Settings → Environment Variables.
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-Some variables live in only one of these; a few must be set in **both**. Each
-variable below is labelled with the environment(s) it belongs to. The
-[`.env.example`](https://github.com/unstack-pro/nextjs-convex) file in the repo is
-split into the same two sections.
+<Tab value="Postgres">
+
+There is **one** configuration surface: `.env.local` in local development, or
+your host's environment variables (e.g. Vercel) in production. Better Auth runs
+inside Next.js and talks to Postgres directly, so there is no second deployment
+environment to populate.
+
+</Tab>
+
+<Tab value="Convex">
+
+There are **two** configuration surfaces:
+
+1. **The Next.js environment** — `.env.local` in local development, or your
+   host's environment variables (e.g. Vercel) in production.
+2. **The Convex deployment environment** — set with
+   `bunx convex env set NAME "value"` or from the Convex dashboard → Settings →
+   Environment Variables.
+
+Some variables live in only one of these; a few must be set in **both**. The
+`.env.example` file in the repo is split into the same two sections.
+
+</Tab>
+
+</Tabs>
 
 <Callout type="warn">
 **Security Notice**: Never commit your `.env.local` file to version control. Keep your secrets secure!
@@ -31,23 +49,71 @@ Copy the example file and fill in your values:
 cp .env.example .env.local
 ```
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+That's the whole setup — every variable below goes in that one file.
+
+</Tab>
+
+<Tab value="Convex">
+
 Then set the Convex-side variables with the CLI (with `bun convex dev` running):
 
 ```bash
 bunx convex env set NAME "value"
 ```
 
----
+</Tab>
 
-## Section 1 — Next.js environment (`.env.local`)
+</Tabs>
 
-These are read by the Next.js app. `NEXT_PUBLIC_*` values are also inlined into
-the browser bundle. In production, set the same values in your host's environment
-variables (see [Deployment](/deployment)).
+## Where Each Variable Lives
+
+| Variable | Postgres edition | Convex edition |
+| --- | --- | --- |
+| `DATABASE_URL` | Required — `.env.local` | Not used |
+| `NEXT_PUBLIC_CONVEX_URL` | Not used | Required — `.env.local` |
+| `NEXT_PUBLIC_CONVEX_SITE_URL` | Not used | Required — `.env.local` |
+| `CONVEX_DEPLOYMENT` | Not used | Written into `.env.local` by `convex dev` |
+| `BETTER_AUTH_SECRET` | Required — `.env.local` | Required — Convex deployment |
+| `JWKS` | Not used | Required — Convex deployment |
+| `BETTER_AUTH_URL` | Not used | Convex deployment; unused at runtime |
+| `EMAIL_FROM` | Required — `.env.local` | Required — Convex deployment |
+| `RESEND_API_KEY` | Required — `.env.local` | Required — Convex deployment |
+| `PASSKEY_RP_ID` | Required — `.env.local` | Required — Convex deployment |
+| `AUTUMN_SECRET_KEY` | Required — `.env.local` | Required — **both** |
+| `NEXT_PUBLIC_APP_URL` | Required — `.env.local` | Required — **both** |
+| `NEXT_PUBLIC_APP_NAME` | Optional — `.env.local` | Required — **both** |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Optional | Optional |
+| `NEXT_PUBLIC_PURCHASE_URL` | Not used | Optional — `.env.local` |
+| `NEXT_PUBLIC_SENTRY_DSN` | Optional, runtime | Optional, runtime |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | Optional, build-time | Optional, build-time |
+
+<Callout type="info">
+Only `NEXT_PUBLIC_*` values reach the browser, and they are inlined into the
+bundle at build time — never put a secret behind that prefix. Convex
+deployment-side variables are read by the Convex backend at runtime and are never
+visible to the Next.js build.
+</Callout>
+
+## Database and Backend
+
+### `DATABASE_URL`
+
+**Postgres edition only.** Required, in `.env.local`.
+
+The Postgres connection string. The app connects with `pg` (node-postgres), so
+any provider works — most hosted ones need `sslmode=require`.
+
+```dotenv
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+```
 
 ### `NEXT_PUBLIC_CONVEX_URL`
 
-**Required**: Yes · **Environment**: Next.js
+**Convex edition only.** Required, in `.env.local`.
 
 Your Convex cloud deployment URL (`….convex.cloud`), printed by `bun convex dev`.
 
@@ -57,7 +123,7 @@ NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
 
 ### `NEXT_PUBLIC_CONVEX_SITE_URL`
 
-**Required**: Yes · **Environment**: Next.js
+**Convex edition only.** Required, in `.env.local`.
 
 The Convex **HTTP Actions** URL — the same deployment on the `.convex.site`
 domain. Take `NEXT_PUBLIC_CONVEX_URL` and swap `.convex.cloud` for `.convex.site`.
@@ -67,111 +133,53 @@ Required by the auth proxy in `lib/auth-server.ts`.
 NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
 ```
 
-### `NEXT_PUBLIC_APP_URL`
+### `CONVEX_DEPLOYMENT`
 
-**Required**: Yes · **Environment**: Next.js **and** Convex
+**Convex edition only.** Written for you, not set by hand.
 
-The public URL of this Next.js app. Used for SEO metadata, the sitemap, email
-links, and the passkey origin. Use `http://localhost:3000` for local dev.
+`bun convex dev` writes it into `.env.local` to record which deployment the CLI
+talks to. It is not in `.env.example`.
 
-```dotenv
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
-
-<Callout type="info">
-This value is also needed on the **Convex** deployment (Convex-side email links
-and the passkey origin use it). Set it in both places.
-</Callout>
-
-### `NEXT_PUBLIC_APP_NAME`
-
-**Required**: Yes · **Environment**: Next.js **and** Convex
-
-Display name shown throughout the UI and transactional emails. Email templates run
-on Convex, so set this in both environments.
-
-```dotenv
-NEXT_PUBLIC_APP_NAME="Unstack Pro"
-```
-
-### `NEXT_PUBLIC_SUPPORT_EMAIL`
-
-**Required**: No · **Environment**: Next.js
-
-Support address surfaced in the landing page / FAQ copy. Falls back to a
-placeholder if unset.
-
-```dotenv
-NEXT_PUBLIC_SUPPORT_EMAIL="support@yourcompany.com"
-```
-
-### `AUTUMN_SECRET_KEY`
-
-**Required**: Yes (for billing) · **Environment**: Next.js **and** Convex
-
-Your [Autumn](https://useautumn.com) billing secret key (starts with `am_sk_`).
-
-<Callout type="error">
-`AUTUMN_SECRET_KEY` must be set in **both** environments. The Next.js billing
-routes (`app/api/autumn/[...all]/route.ts`) read it at runtime in the Node
-runtime, **and** the Convex auth hooks read it on the deployment. Setting it in
-only one place will break checkout/portal or seat syncing.
-</Callout>
-
-```dotenv
-AUTUMN_SECRET_KEY="am_sk_..."
-```
-
-### Sentry (optional)
-
-**Required**: No · **Environment**: Next.js
-
-Error monitoring. Leave all of these unset to disable Sentry entirely — the SDK
-no-ops when `NEXT_PUBLIC_SENTRY_DSN` is missing, and builds skip source-map upload
-when `SENTRY_AUTH_TOKEN` is missing.
-
-```dotenv
-NEXT_PUBLIC_SENTRY_DSN=""
-SENTRY_ORG=""
-SENTRY_PROJECT=""
-SENTRY_AUTH_TOKEN=""
-```
-
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry project DSN. When empty, Sentry is disabled. |
-| `SENTRY_ORG` | Sentry org slug (build-time, for source maps). |
-| `SENTRY_PROJECT` | Sentry project slug (build-time, for source maps). |
-| `SENTRY_AUTH_TOKEN` | Token used to upload source maps at build time. |
-
-<Callout type="info">
-`CONVEX_DEPLOYMENT` is written into `.env.local` automatically by `bun convex dev`
-— you don't set it by hand. It identifies which deployment the CLI talks to.
-</Callout>
-
----
-
-## Section 2 — Convex deployment environment
-
-These live on the **Convex deployment**, not in `.env.local`. Set each with
-`bunx convex env set NAME "value"` (or via the Convex dashboard → Settings →
-Environment Variables).
+## Auth and Passkeys
 
 ### `BETTER_AUTH_SECRET`
 
-**Required**: Yes · **Environment**: Convex
-
-Random secret used by Better Auth for session/token encryption. The JWKS private
-key is encrypted with it, so **set this before generating JWKS**.
+Required in both editions. Random secret used by Better Auth for session and
+token encryption.
 
 **Generate with**:
 ```bash
 openssl rand -base64 32
 ```
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Set it in `.env.local`:
+
+```dotenv
+BETTER_AUTH_SECRET="…"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Set it on the Convex deployment. The JWKS private key is encrypted with it, so
+**set this before generating `JWKS`**:
+
+```bash
+bunx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
+```
+
+</Tab>
+
+</Tabs>
+
 ### `JWKS`
 
-**Required**: Yes · **Environment**: Convex
+**Convex edition only.** Required, on the Convex deployment.
 
 The RS256 signing key set for Convex JWTs. `convex/auth.config.ts` reads the
 public key set from this variable; Better Auth signs tokens with the stored
@@ -182,7 +190,7 @@ returns it in the exact shape the auth config expects. With `bun convex dev`
 running (so the functions are deployed):
 
 ```bash
-# Prints the JWKS document set.
+# Prints the JWKS document set
 bunx convex run betterAuth/auth:getLatestJwks
 ```
 
@@ -192,8 +200,8 @@ Set the output as the `JWKS` env var. On macOS/Linux you can do it in one step:
 bunx convex env set JWKS "$(bunx convex run betterAuth/auth:getLatestJwks)"
 ```
 
-On Windows, copy the printed JSON and paste it into
-`bunx convex env set JWKS '…'`.
+On Windows, copy the printed JSON and paste it into the same command in place of
+the substitution.
 
 <Callout type="warn">
 To rotate keys, run `bunx convex run betterAuth/auth:rotateKeys` and set the
@@ -201,60 +209,48 @@ returned value as `JWKS` again. **Key rotation logs out all users** — do it on
 when necessary, during low-traffic periods.
 </Callout>
 
+The Postgres edition has no equivalent: Better Auth runs inside Next.js and
+issues its own sessions, so there is nothing to generate or rotate.
+
 ### `BETTER_AUTH_URL`
 
-**Required**: No (kept for the CLI) · **Environment**: Convex
+**Convex edition only.** Not required.
 
-Unused at runtime — kept only for the Better Auth CLI. The runtime uses
-`NEXT_PUBLIC_APP_URL` instead, so you don't normally need to touch this.
+Present on the Convex deployment but unused at runtime — kept only for the Better
+Auth CLI. The runtime uses `NEXT_PUBLIC_APP_URL` instead, so you don't normally
+need to touch this.
 
 ```dotenv
 BETTER_AUTH_URL="http://localhost:3000"
 ```
 
-### `EMAIL_FROM`
-
-**Required**: Yes · **Environment**: Convex
-
-A sender address verified in Resend. **Every email flow throws if this is
-missing.**
-
-```dotenv
-EMAIL_FROM="Unstack Pro <noreply@yourdomain.com>"
-```
-
-**Format**: `"Display Name <email@domain.com>"`.
-
-### `RESEND_API_KEY`
-
-**Required**: Yes · **Environment**: Convex
-
-Your [Resend](https://resend.com) API key for transactional email
-(verification, OTP, invitations).
-
-```dotenv
-RESEND_API_KEY="re_..."
-```
-
-### `AUTUMN_SECRET_KEY`
-
-**Required**: Yes (for billing) · **Environment**: Convex **and** Next.js
-
-Same key as in Section 1 — the Convex auth hooks read it for seat syncing and the
-Pro-plan gate. See the callout under Section 1: it must be set in **both**
-environments.
-
 ### `PASSKEY_RP_ID`
 
-**Required**: Yes · **Environment**: Convex
+Required in both editions.
 
 The Relying Party ID for WebAuthn/passkeys — the **bare public domain**, no scheme
 or port. Use `localhost` for local dev; in production it must exactly match your
 deployed domain.
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
 ```dotenv
 PASSKEY_RP_ID="localhost"
 ```
+
+</Tab>
+
+<Tab value="Convex">
+
+```bash
+bunx convex env set PASSKEY_RP_ID "localhost"
+```
+
+</Tab>
+
+</Tabs>
 
 <Callout type="warn">
 For production with subdomains, use the root domain (e.g. `example.com`, not
@@ -262,15 +258,271 @@ For production with subdomains, use the root domain (e.g. `example.com`, not
 must be the matching `https://` origin.
 </Callout>
 
-### `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_APP_NAME`
+## Email
 
-Also set these on the Convex deployment (same values as `.env.local`) — Convex-side
-email links and the passkey origin use `NEXT_PUBLIC_APP_URL`, and email templates
-use `NEXT_PUBLIC_APP_NAME`.
+### `EMAIL_FROM`
 
----
+Required in both editions. A sender address verified in Resend. **Every email
+flow throws if this is missing.**
 
-## Setting Convex environment variables
+**Format**: `"Display Name <email@domain.com>"`.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```dotenv
+EMAIL_FROM="Unstack Pro <noreply@yourdomain.com>"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Email is sent from Convex, so the variable belongs on the deployment:
+
+```bash
+bunx convex env set EMAIL_FROM "Unstack Pro <noreply@yourdomain.com>"
+```
+
+</Tab>
+
+</Tabs>
+
+### `RESEND_API_KEY`
+
+Required in both editions. Your [Resend](https://resend.com) API key for
+transactional email (verification, OTP, invitations).
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```dotenv
+RESEND_API_KEY="re_..."
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+```bash
+bunx convex env set RESEND_API_KEY "re_..."
+```
+
+</Tab>
+
+</Tabs>
+
+## Billing
+
+### `AUTUMN_SECRET_KEY`
+
+Required for billing in both editions. Your
+[Autumn](https://useautumn.com) billing secret key (starts with `am_sk_`).
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+One place only — `.env.local`. The billing routes
+(`app/api/autumn/[...all]/route.ts`) read it at runtime.
+
+```dotenv
+AUTUMN_SECRET_KEY="am_sk_..."
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+<Callout type="error">
+`AUTUMN_SECRET_KEY` must be set in **both** environments. The Next.js billing
+routes (`app/api/autumn/[...all]/route.ts`) read it at runtime in the Node
+runtime, **and** the Convex auth hooks read it on the deployment for seat syncing
+and the Pro-plan gate. Setting it in only one place will break checkout/portal or
+seat syncing.
+</Callout>
+
+```dotenv title=".env.local"
+AUTUMN_SECRET_KEY="am_sk_..."
+```
+
+```bash
+bunx convex env set AUTUMN_SECRET_KEY "am_sk_..."
+```
+
+</Tab>
+
+</Tabs>
+
+## App Identity
+
+### `NEXT_PUBLIC_APP_URL`
+
+Required in both editions.
+
+The public URL of the Next.js app. Used for SEO metadata, the sitemap, email
+links, trusted origins, and the passkey origin. Use `http://localhost:3000` for
+local dev.
+
+```dotenv
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`.env.local` only.
+
+</Tab>
+
+<Tab value="Convex">
+
+Also set it on the **Convex** deployment — Convex-side email links and the passkey
+origin read it there:
+
+```bash
+bunx convex env set NEXT_PUBLIC_APP_URL "http://localhost:3000"
+```
+
+</Tab>
+
+</Tabs>
+
+### `NEXT_PUBLIC_APP_NAME`
+
+Display name shown throughout the UI and in transactional emails.
+
+```dotenv
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
+```
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Optional in `.env.local` — a fallback name is used when it is unset.
+
+</Tab>
+
+<Tab value="Convex">
+
+Required in both places. Email templates run on Convex, so set it on the
+deployment too:
+
+```bash
+bunx convex env set NEXT_PUBLIC_APP_NAME "Unstack Pro"
+```
+
+</Tab>
+
+</Tabs>
+
+### `NEXT_PUBLIC_SUPPORT_EMAIL`
+
+Optional in both editions, in `.env.local`.
+
+Support address surfaced in the landing page / FAQ copy. Falls back to a
+placeholder if unset.
+
+```dotenv
+NEXT_PUBLIC_SUPPORT_EMAIL="support@yourcompany.com"
+```
+
+### `NEXT_PUBLIC_PURCHASE_URL`
+
+**Convex edition only.** Optional, in `.env.local`.
+
+The checkout link behind the landing page's buy buttons (`app/page.tsx`). Falls
+back to `#` — a dead link — when unset. The Postgres edition does not read this
+variable at all; its purchase link is hardcoded.
+
+```dotenv
+NEXT_PUBLIC_PURCHASE_URL="https://buy.yourcompany.com/unstack-pro"
+```
+
+## Error Monitoring
+
+### Sentry (optional)
+
+Optional in both editions, in `.env.local` (or your host's environment).
+
+Leave all of these unset to disable Sentry entirely — the SDK no-ops when
+`NEXT_PUBLIC_SENTRY_DSN` is missing, and builds skip source-map upload when
+`SENTRY_AUTH_TOKEN` is missing.
+
+```dotenv
+NEXT_PUBLIC_SENTRY_DSN=""
+SENTRY_ORG=""
+SENTRY_PROJECT=""
+SENTRY_AUTH_TOKEN=""
+```
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry project DSN, read at runtime. When empty, Sentry is disabled. |
+| `SENTRY_ORG` | Sentry org slug (build-time, for source maps). |
+| `SENTRY_PROJECT` | Sentry project slug (build-time, for source maps). |
+| `SENTRY_AUTH_TOKEN` | Token used to upload source maps at build time. |
+
+## Complete Example
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```dotenv title=".env.local"
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
+NEXT_PUBLIC_SUPPORT_EMAIL="support@yourcompany.com"
+
+BETTER_AUTH_SECRET="replace-me--run: openssl rand -base64 32"
+
+EMAIL_FROM="Unstack Pro <noreply@yourdomain.com>"
+RESEND_API_KEY="re_..."
+
+AUTUMN_SECRET_KEY="am_sk_..."
+
+PASSKEY_RP_ID="localhost"
+
+# Optional — Sentry (leave empty to disable)
+NEXT_PUBLIC_SENTRY_DSN=""
+SENTRY_ORG=""
+SENTRY_PROJECT=""
+SENTRY_AUTH_TOKEN=""
+```
+
+That is the complete configuration — there is nothing else to set anywhere.
+
+</Tab>
+
+<Tab value="Convex">
+
+```dotenv title=".env.local"
+NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
+NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_NAME="Unstack Pro"
+NEXT_PUBLIC_SUPPORT_EMAIL="support@yourcompany.com"
+
+# Optional — checkout link behind the landing page's buy buttons
+NEXT_PUBLIC_PURCHASE_URL="https://buy.yourcompany.com/unstack-pro"
+
+# Required in BOTH environments (also set on Convex)
+AUTUMN_SECRET_KEY="am_sk_..."
+
+# Optional — Sentry (leave empty to disable)
+NEXT_PUBLIC_SENTRY_DSN=""
+SENTRY_ORG=""
+SENTRY_PROJECT=""
+SENTRY_AUTH_TOKEN=""
+```
+
+And on the deployment:
 
 ```bash
 # Auth
@@ -297,44 +549,48 @@ You can view and manage Convex environment variables in your
 [Convex dashboard](https://dashboard.convex.dev).
 </Callout>
 
-## Complete `.env.local` example
+</Tab>
 
-```dotenv title=".env.local"
-# --- Section 1: Next.js environment ---
-NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
-NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-NEXT_PUBLIC_APP_NAME="Unstack Pro"
-NEXT_PUBLIC_SUPPORT_EMAIL="support@yourcompany.com"
+</Tabs>
 
-# Required in BOTH environments (also set on Convex)
-AUTUMN_SECRET_KEY="am_sk_..."
-
-# Optional — Sentry (leave empty to disable)
-NEXT_PUBLIC_SENTRY_DSN=""
-SENTRY_ORG=""
-SENTRY_PROJECT=""
-SENTRY_AUTH_TOKEN=""
-```
-
-The Convex-side variables (`BETTER_AUTH_SECRET`, `JWKS`, `EMAIL_FROM`,
-`RESEND_API_KEY`, `AUTUMN_SECRET_KEY`, `PASSKEY_RP_ID`, `NEXT_PUBLIC_APP_URL`,
-`NEXT_PUBLIC_APP_NAME`) are set with `bunx convex env set`, not in `.env.local`.
-
-## Environment Variable Checklist
+## Checklist
 
 Before deploying, make sure these are set:
 
-**Next.js environment (`.env.local` / host):**
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`.env.local` (or your host's environment):
+
+- [ ] `DATABASE_URL`
+- [ ] `NEXT_PUBLIC_APP_URL`
+- [ ] `BETTER_AUTH_SECRET`
+- [ ] `EMAIL_FROM` (verified Resend sender)
+- [ ] `RESEND_API_KEY`
+- [ ] `AUTUMN_SECRET_KEY`
+- [ ] `PASSKEY_RP_ID`
+- [ ] `NEXT_PUBLIC_APP_NAME` (optional)
+- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` (optional)
+- [ ] Sentry vars (optional)
+
+</Tab>
+
+<Tab value="Convex">
+
+Next.js environment (`.env.local` / host):
+
 - [ ] `NEXT_PUBLIC_CONVEX_URL`
 - [ ] `NEXT_PUBLIC_CONVEX_SITE_URL`
 - [ ] `NEXT_PUBLIC_APP_URL`
 - [ ] `NEXT_PUBLIC_APP_NAME`
 - [ ] `AUTUMN_SECRET_KEY`
 - [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` (optional)
+- [ ] `NEXT_PUBLIC_PURCHASE_URL` (optional)
 - [ ] Sentry vars (optional)
 
-**Convex deployment:**
+Convex deployment:
+
 - [ ] `BETTER_AUTH_SECRET`
 - [ ] `JWKS`
 - [ ] `EMAIL_FROM` (verified Resend sender)
@@ -343,32 +599,91 @@ Before deploying, make sure these are set:
 - [ ] `PASSKEY_RP_ID`
 - [ ] `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_APP_NAME`
 
+</Tab>
+
+</Tabs>
+
 ## Troubleshooting
 
-### "X is not defined" errors
+### "X is not defined" Errors
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Confirm the variable is in `.env.local` and that the dev server was restarted
+afterwards. One trap: `drizzle-kit` does not load `.env.local`, so `db:generate`
+and `db:migrate` see `DATABASE_URL` as undefined when run bare — export the file
+into the shell first:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+
+</Tab>
+
+<Tab value="Convex">
 
 When Convex code throws that a variable is missing, consult `createAuthOptions`
 in `convex/betterAuth/auth.ts` for the full required set, and confirm the variable
-is set on the **Convex** deployment (not just `.env.local`).
+is set on the **Convex** deployment — not just in `.env.local`.
 
-### Billing routes 500 or seats don't sync
+</Tab>
+
+</Tabs>
+
+### Billing Routes 500 or Seats Don't Sync
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`AUTUMN_SECRET_KEY` is missing from `.env.local`, or the products were never
+pushed with `bunx atmn push`.
+
+</Tab>
+
+<Tab value="Convex">
 
 `AUTUMN_SECRET_KEY` is missing from one of the two environments. Set it in **both**
 `.env.local` (Next.js runtime) and on the Convex deployment.
 
-### Passkeys not working
+</Tab>
+
+</Tabs>
+
+### Passkeys Not Working
 
 `PASSKEY_RP_ID` must match your domain exactly (`localhost` for dev, the root
-domain in production), and `NEXT_PUBLIC_APP_URL` must be the matching origin.
+domain in production), and `NEXT_PUBLIC_APP_URL` must be the matching origin. In
+the Convex edition, check that `PASSKEY_RP_ID` is on the **deployment**, since
+that is where Better Auth reads it.
 
 ## Security Best Practices
 
 1. **Never commit secrets**: keep `.env.local` in `.gitignore`.
-2. **Rotate JWKS periodically**: `bunx convex run betterAuth/auth:rotateKeys`, then
-   set the output as `JWKS` (this logs everyone out).
-3. **Use different secrets** for development and production.
-4. **Restrict API keys** to the minimum permissions necessary.
-5. **Monitor access**: review Convex and Resend logs regularly.
+2. **Use different secrets** for development and production.
+3. **Restrict API keys** to the minimum permissions necessary.
+4. **Monitor access**: review your database, backend, and Resend logs regularly.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Rotating `BETTER_AUTH_SECRET` invalidates existing sessions, so treat it as a
+logout-everyone operation and schedule it accordingly.
+
+</Tab>
+
+<Tab value="Convex">
+
+Rotate JWKS periodically with `bunx convex run betterAuth/auth:rotateKeys`, then
+set the output as `JWKS` — this logs everyone out, so schedule it for a
+low-traffic period.
+
+</Tab>
+
+</Tabs>
 
 <Callout type="error">
 **Production Reminder**: Always use HTTPS in production. Never use `http://` URLs
