@@ -6,17 +6,40 @@ icon: Wrench
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-**Quick solutions to common issues.** Most problems are related to environment variables, Convex configuration, or email setup.
+**Quick solutions to common issues.** Most problems come down to environment
+variables, the data layer's configuration, or email setup.
+
+Which environment surfaces you have to check depends on your edition — pick
+yours with the switcher below, and the choice is remembered across every page in
+these docs.
 
 ## Quick Fixes
 
 Before diving into specific issues, try these first:
 
 1. **Restart the dev server**: Stop and restart `bun dev`
-2. **Restart Convex**: Stop and restart `bun convex dev`
-3. **Clear browser cookies**: Especially for auth issues
-4. **Check environment variables**: Ensure all are set correctly
+2. **Clear browser cookies**: Especially for auth issues
+3. **Check environment variables**: Ensure all are set correctly
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+4. **Check the database is reachable**: `psql "$DATABASE_URL" -c 'select 1'`
+5. **Check the migrations are applied**: `bun run db:migrate`, then look at the
+   server output in your terminal — auth and data errors surface in the Next.js
+   process
+
+</Tab>
+
+<Tab value="Convex">
+
+4. **Restart Convex**: Stop and restart `bun convex dev`
 5. **Check Convex dashboard**: Look for errors in function logs
+
+</Tab>
+
+</Tabs>
 
 ## Authentication Issues
 
@@ -34,27 +57,52 @@ Before diving into specific issues, try these first:
    - Check if verification email was sent
    - Try resending verification email
 
-2. **Verify Convex connection**:
-   ```bash
-   bun convex dev
-   ```
-   Ensure Convex is running and connected.
+2. **Verify the backend is reachable and the secret is set**:
 
-3. **Check `BETTER_AUTH_SECRET` and `JWKS`**:
-   - Both must be set on the **Convex** deployment
-   - `BETTER_AUTH_SECRET` — generate a new one if unsure:
-   ```bash
-   openssl rand -base64 32
-   ```
-   - If you rotated `BETTER_AUTH_SECRET`, regenerate `JWKS` too (the private key is
-     encrypted with it)
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-4. **Check `NEXT_PUBLIC_APP_URL`**:
+<Tab value="Postgres">
+
+`BETTER_AUTH_SECRET` and `DATABASE_URL` both belong in `.env.local`. Generate a
+secret if you're unsure:
+
+```bash
+openssl rand -base64 32
+```
+
+Changing `BETTER_AUTH_SECRET` invalidates every existing session, so everyone
+has to sign in again.
+
+</Tab>
+
+<Tab value="Convex">
+
+Make sure Convex is running and connected:
+
+```bash
+bun convex dev
+```
+
+`BETTER_AUTH_SECRET` and `JWKS` must both be set on the **Convex** deployment,
+not in `.env.local`. Generate a secret if you're unsure:
+
+```bash
+openssl rand -base64 32
+```
+
+If you rotated `BETTER_AUTH_SECRET`, regenerate `JWKS` too — the private key is
+encrypted with it.
+
+</Tab>
+
+</Tabs>
+
+3. **Check `NEXT_PUBLIC_APP_URL`**:
    - Must match your actual URL (the runtime uses this, not `BETTER_AUTH_URL`)
    - For local: `http://localhost:3000`
    - For production: `https://yourdomain.com`
 
-5. **Clear cookies and try again**:
+4. **Clear cookies and try again**:
    - Open DevTools → Application → Cookies
    - Delete all cookies for your domain
    - Try signing in again
@@ -145,10 +193,29 @@ Before diving into specific issues, try these first:
 
 **Solutions:**
 
-1. **Check Resend API key**:
-   ```bash
-   bunx convex env set RESEND_API_KEY "re_your_key"
-   ```
+1. **Check the Resend API key is where the sender reads it**:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Email is sent from Next.js (`lib/email.ts`), so `RESEND_API_KEY` and
+`EMAIL_FROM` belong in `.env.local` — restart `bun dev` after changing them.
+
+</Tab>
+
+<Tab value="Convex">
+
+Email is sent from Convex (`convex/email.ts`), so both variables belong on the
+Convex deployment:
+
+```bash
+bunx convex env set RESEND_API_KEY "re_your_key"
+```
+
+</Tab>
+
+</Tabs>
 
 2. **Verify `EMAIL_FROM`**:
    - Must use verified domain
@@ -187,95 +254,208 @@ Before diving into specific issues, try these first:
    - Start with low volume
    - Gradually increase sending
 
-## Convex Issues
+## Data Layer Issues
 
 ### Connection Failed
 
 **Symptoms:**
-- "Failed to connect to Convex"
-- Real-time updates not working
-- Queries returning undefined
+- The app can't read or write any data
+- Queries returning undefined, or pages failing to render
+- Errors naming the database or deployment
 
 **Solutions:**
 
-1. **Check Convex is running**:
-   ```bash
-   bun convex dev
-   ```
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-2. **Verify Convex URLs**:
-   ```dotenv
-   CONVEX_DEPLOYMENT="dev:your-deployment"
-   NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
-   NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
-   ```
+<Tab value="Postgres">
 
-3. **Check Convex dashboard**:
-   - Login to [dashboard.convex.dev](https://dashboard.convex.dev)
-   - Verify deployment exists
-   - Check for errors in logs
+**Check `DATABASE_URL` is set and reachable.** It lives in `.env.local`, and the
+dev server only picks up changes on restart:
 
-4. **Reinstall Convex**:
-   ```bash
-   bun add convex
-   bun convex dev
-   ```
+```bash
+psql "$DATABASE_URL" -c 'select 1'
+```
+
+**Check the connection string.** Most hosted providers require
+`?sslmode=require`; a string that works from their web console can still fail
+locally without it.
+
+**Check your provider's connection limit.** Each dev server and each migration
+run opens its own connections. If your provider offers a pooled connection
+string, use it.
+
+**Check the migrations actually ran.** A missing table or column reads like a
+connection problem but isn't:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+**Check Convex is running:**
+
+```bash
+bun convex dev
+```
+
+**Verify the Convex URLs** all name the same deployment:
+
+```dotenv
+CONVEX_DEPLOYMENT="dev:your-deployment"
+NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
+NEXT_PUBLIC_CONVEX_SITE_URL="https://your-deployment.convex.site"
+```
+
+**Check the Convex dashboard.** Log in to
+[dashboard.convex.dev](https://dashboard.convex.dev), confirm the deployment
+exists, and read its logs.
+
+**Reinstall Convex** if the CLI itself is misbehaving:
+
+```bash
+bun add convex
+bun convex dev
+```
+
+</Tab>
+
+</Tabs>
 
 ### Schema Errors
 
 **Symptoms:**
-- "Schema validation failed"
-- Type errors in Convex functions
-- Deployment fails
+- Schema validation or migration failures
+- Type errors against tables you just changed
+- Deployment fails before the app starts
 
 **Solutions:**
 
-1. **Check schema.ts**:
-   - Ensure all fields have valid types
-   - Check for syntax errors
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-2. **Run type check**:
-   ```bash
-   bun convex dev
-   ```
-   Convex validates schema on startup.
+<Tab value="Postgres">
 
-3. **Reset and redeploy**:
-   ```bash
-   bunx convex deploy --yes
-   ```
+**`DATABASE_URL` is undefined when running drizzle-kit.** The CLI does not read
+`.env.local`. Export it into the shell first:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+
+**Never reach for `db:push` to fix a broken schema.** `drizzle-kit push` diffs
+the schema straight against the database and skips the `drizzle/` folder, so the
+custom trigger migrations never run and the journal drifts out of sync with what
+is actually deployed. Generate and apply a migration instead:
+
+```bash
+bun run db:generate
+bun run db:migrate
+```
+
+**Auth tables out of date after editing `lib/auth.ts`.** Regenerate them before
+generating the migration, and re-apply the compound indexes marked `port:` in
+the header of `lib/db/auth-schema.ts`:
+
+```bash
+bun run auth:schema
+bun run db:generate
+bun run db:migrate
+```
+
+<Callout type="warn">
+A migration that half-applied leaves the database and `drizzle/meta/_journal.json`
+disagreeing. Fix the migration and re-run it rather than editing the journal by
+hand.
+</Callout>
+
+</Tab>
+
+<Tab value="Convex">
+
+**Check `convex/schema.ts`** — every field needs a valid `v.*` validator, and a
+syntax error there fails the whole push.
+
+**Let Convex type-check it.** The schema is validated on startup:
+
+```bash
+bun convex dev
+```
+
+**Redeploy** once the schema is valid:
+
+```bash
+bunx convex deploy --yes
+```
+
+**Auth tables out of date after editing `convex/betterAuth/auth.ts`:**
+
+```bash
+bun scripts/generate-auth-schema.ts
+```
+
+Keep your own indexes in `convex/schema.ts`, layered onto the spread tables, so
+a regeneration cannot wipe them.
+
+</Tab>
+
+</Tabs>
 
 ### Function Errors
 
 **Symptoms:**
-- Queries/mutations failing
+- Reads or writes failing
 - Error messages in console
 - Unexpected behavior
 
 **Solutions:**
 
-1. **Check Convex logs**:
-   - Open Convex dashboard
-   - Go to Logs section
-   - Find the failing function
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-2. **Add error handling**:
-   ```typescript
-   export const myFunction = query({
-     handler: async (ctx) => {
-       try {
-         // Your code
-       } catch (error) {
-         console.error("Function failed:", error);
-         throw error;
-       }
-     },
-   });
-   ```
+<Tab value="Postgres">
 
-3. **Test locally first**:
-   - Use Convex dashboard to test functions
-   - Check input arguments
+**Read the Next.js server output.** Reads run in Server Components via
+`lib/server/*` and writes are server actions in `actions/*`, so both throw in the
+Next.js process — not in the browser console.
+
+**Check the UI actually re-rendered.** There are no live queries in this
+edition: after a mutation the client has to call `router.refresh()` (or
+invalidate the relevant React Query key) for the Server Component to re-read.
+Stale-looking data is usually a missing refresh, not a failed write.
+
+**Check the error is not a constraint.** Foreign keys and the owner-guard
+triggers in `drizzle/` reject writes at the database level; the message names the
+constraint.
+
+</Tab>
+
+<Tab value="Convex">
+
+**Check Convex logs.** Open the dashboard, go to Logs, and find the failing
+function.
+
+**Add error handling:**
+
+```typescript
+export const myFunction = query({
+  handler: async (ctx) => {
+    try {
+      // Your code
+    } catch (error) {
+      console.error("Function failed:", error);
+      throw error;
+    }
+  },
+});
+```
+
+**Test the function directly** from the Convex dashboard and check its input
+arguments.
+
+</Tab>
+
+</Tabs>
 
 ## Environment Variable Issues
 
@@ -302,14 +482,41 @@ Before diving into specific issues, try these first:
    - Environment changes require restart
    - Stop and restart `bun dev`
 
-4. **Set in Convex**:
-   ```bash
-   bunx convex env set VARIABLE_NAME "value"
-   ```
+4. **Check you set it on the right surface**:
 
-5. **Check which env file is loaded**:
-   - `.env.local` for development
-   - Vercel/platform env for production
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+There is only one: `.env.local` in development, your host's environment in
+production. Everything the app reads lives there.
+
+The exception is `drizzle-kit`, which does **not** load `.env.local` — so
+`db:generate` and `db:migrate` see `DATABASE_URL` as undefined when run bare.
+Export the file into the shell first:
+
+```bash
+set -a && . ./.env.local && set +a && bunx drizzle-kit migrate
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+There are two, and a variable set on the wrong one is simply absent. `.env.local`
+covers the Next.js side; the Convex deployment covers everything Better Auth
+itself reads — `BETTER_AUTH_SECRET`, `JWKS`, `EMAIL_FROM`, `RESEND_API_KEY`,
+`PASSKEY_RP_ID`:
+
+```bash
+bunx convex env set VARIABLE_NAME "value"
+```
+
+`AUTUMN_SECRET_KEY` is the one variable needed in **both** places.
+
+</Tab>
+
+</Tabs>
 
 ### Secret Mismatch
 
@@ -321,10 +528,27 @@ Before diving into specific issues, try these first:
 **Solutions:**
 
 1. **Sync secrets**:
-   - `BETTER_AUTH_SECRET` must be identical in:
-     - `.env.local`
-     - Convex environment
-     - Production environment
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`BETTER_AUTH_SECRET` lives in exactly one place per environment — `.env.local`
+locally, your host's environment in production. Development and production must
+use **different** values.
+
+</Tab>
+
+<Tab value="Convex">
+
+`BETTER_AUTH_SECRET` lives on the **Convex** deployment, one value per
+deployment. Development and production deployments must use **different**
+values, and rotating it means regenerating `JWKS` on the same deployment,
+because the private key is encrypted with it.
+
+</Tab>
+
+</Tabs>
 
 2. **Generate new secret**:
    ```bash
@@ -386,6 +610,32 @@ Before diving into specific issues, try these first:
    - Deployment logs show errors
    - Function logs show runtime errors
 
+4. **Remember that `vercel.json` overrides the dashboard's Build Command**, and
+   that production and preview take different paths:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+A production deploy runs `drizzle-kit migrate` before `next build`. If the log
+fails before the Next.js build even starts, it is the migrate step —
+`DATABASE_URL` is unreachable from the build, or a migration errored. Preview
+deploys skip migrating entirely, so they can keep passing while production
+fails.
+
+</Tab>
+
+<Tab value="Convex">
+
+A production deploy runs `convex deploy`, which authenticates with
+`CONVEX_DEPLOY_KEY` set in **Vercel** (not on the Convex deployment). Preview
+deploys skip that step, so a missing deploy key only shows up on your first
+production deploy.
+
+</Tab>
+
+</Tabs>
+
 ## Organization Issues
 
 ### Can't Create Organization
@@ -439,13 +689,30 @@ Before diving into specific issues, try these first:
 **Solutions:**
 
 1. **Check admin role**:
-   - User must have `admin` role
-   - Set in Convex dashboard
+   - User must have `admin` (or `owner`) in its `role` value
+   - `role` is a comma-separated string, so `admin,user` counts
 
-2. **Set first admin**:
-   - Go to Convex dashboard
-   - Navigate to `betterAuth` → `users`
-   - Edit your user's role to `admin`
+2. **Set the first admin by hand** — register a normal account first, then
+   promote it:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```sql
+update "user" set role = 'admin' where email = 'you@example.com';
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Open the Convex dashboard, find your row in the `user` table, and edit its
+`role` field to `admin`.
+
+</Tab>
+
+</Tabs>
 
 ### User Actions Failing
 
@@ -466,17 +733,35 @@ Before diving into specific issues, try these first:
 
 **Solutions:**
 
-1. **Check Convex queries**:
-   - Avoid fetching too much data
-   - Use indexes for filters
-
-2. **Use pagination**:
+1. **Use pagination**:
    - Don't load all records at once
    - Implement cursor-based pagination
 
-3. **Check network**:
-   - Slow connection affects real-time updates
-   - Check Convex region is close to users
+2. **Narrow your reads**:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- Select only the columns you need rather than whole rows
+- Make sure an index covers what you filter and sort on — `explain analyze`
+  against `DATABASE_URL` shows whether one is being used
+- Watch for N+1 reads: use Drizzle's `with` to pull related rows in one query
+- Host the database in the same region as your functions; every read is a
+  round trip
+
+</Tab>
+
+<Tab value="Convex">
+
+- Avoid fetching too much data
+- Use `.withIndex(...)` rather than `.filter(...)`, which scans the table
+- Check the Convex region is close to your users — a slow connection shows up
+  as laggy real-time updates
+
+</Tab>
+
+</Tabs>
 
 ### Memory Issues
 
@@ -496,14 +781,48 @@ If you're still stuck:
 
 1. **Check logs**:
    - Browser console
-   - Convex dashboard logs
-   - Vercel deployment logs
+   - Vercel deployment and function logs
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Server-side errors surface in the Next.js process — your terminal locally,
+Vercel's function logs in production — because auth and data access both run
+there. Slow-query and connection metrics come from your database provider.
+
+</Tab>
+
+<Tab value="Convex">
+
+Convex dashboard logs carry everything that runs inside Convex, including Better
+Auth and email sending.
+
+</Tab>
+
+</Tabs>
 
 2. **Search documentation**:
-   - [Convex Docs](https://docs.convex.dev)
-   - [better-convex Docs](https://better-convex.com/docs) - Our Better Auth + Convex integration
    - [Better Auth Docs](https://www.better-auth.com/docs)
    - [Next.js Docs](https://nextjs.org/docs)
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview)
+- [drizzle-kit migrations](https://orm.drizzle.team/docs/kit-overview)
+
+</Tab>
+
+<Tab value="Convex">
+
+- [Convex Docs](https://docs.convex.dev)
+- [kitcn](https://kitcn.dev) — the Better Auth + Convex integration
+
+</Tab>
+
+</Tabs>
 
 3. **Common error messages**:
    - Search the exact error message
@@ -515,5 +834,6 @@ If you're still stuck:
    - Describe steps to reproduce
 
 <Callout type="info">
-Most issues are environment-related. Double-check all environment variables are set correctly in both `.env.local` and Convex.
+Most issues are environment-related. Double-check every variable is set — and
+set on the right surface for your edition.
 </Callout>

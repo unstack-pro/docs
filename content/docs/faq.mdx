@@ -6,7 +6,29 @@ icon: HelpCircle
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-Common questions and answers about Unstack Pro Convex Edition.
+Common questions and answers about Unstack Pro.
+
+Unstack Pro ships in two editions that differ in where the data lives and where
+Better Auth runs. Answers that depend on which one you have are behind the
+switcher below — the choice is remembered across every page in these docs.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Better Auth runs inside Next.js and talks to PostgreSQL through Drizzle ORM.
+One environment surface, one process, SQL migrations.
+
+</Tab>
+
+<Tab value="Convex">
+
+Better Auth runs inside Convex. Two environment surfaces, two processes, and
+schema pushed rather than migrated.
+
+</Tab>
+
+</Tabs>
 
 ## General
 
@@ -24,17 +46,42 @@ Unstack Pro is a production-ready Next.js template with authentication, organiza
 
 ### What tech stack does it use?
 
+Everything except the data layer is shared:
+
 | Technology | Purpose |
 |------------|---------|
 | Next.js 16 | React framework with App Router |
 | React 19 | UI library |
-| Convex | Real-time database and backend |
-| Better Auth | Authentication (via [better-convex](https://better-convex.com)) |
 | Tailwind CSS | Styling |
-| Shadcn UI + HeroUI | UI components |
+| Shadcn/ui | UI components |
 | React Email + Resend | Transactional emails |
 | Autumn | Billing |
+| Biome | Linting and formatting |
 | TypeScript | Type safety |
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+| Technology | Purpose |
+|------------|---------|
+| PostgreSQL | Database |
+| Drizzle ORM | Schema, queries and migrations |
+| `pg` (node-postgres) | Database driver — no vendor lock-in |
+| Better Auth | Authentication, running inside Next.js |
+
+</Tab>
+
+<Tab value="Convex">
+
+| Technology | Purpose |
+|------------|---------|
+| Convex | Real-time database and backend |
+| Better Auth | Authentication, running inside Convex via [kitcn](https://kitcn.dev) |
+
+</Tab>
+
+</Tabs>
 
 ### Is it open source?
 
@@ -50,21 +97,81 @@ Check your license terms. Typically, you can use the template for multiple perso
 
 Most developers are up and running in 10-15 minutes. The auth system is already configured - you just need to:
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+1. Clone the repository
+2. Install dependencies
+3. Create a PostgreSQL database and a Resend account
+4. Configure `.env.local`
+5. Apply the migrations with `bun run db:migrate`
+6. Run the development server
+
+</Tab>
+
+<Tab value="Convex">
+
 1. Clone the repository
 2. Install dependencies
 3. Set up Convex and Resend accounts
-4. Configure environment variables
-5. Run the development server
+4. Configure environment variables in `.env.local` **and** on the Convex
+   deployment
+5. Run the development server alongside `bun convex dev`
 
-### Do I need to know Convex?
+</Tab>
 
-Yes, you'll need basic Convex knowledge. Most of the complex setup is already done for you, but you'll need to understand how to write queries and mutations when adding your own features. The [Convex documentation](https://docs.convex.dev) is excellent for learning the basics.
+</Tabs>
+
+### Do I need to know the data layer?
+
+Some familiarity helps once you start adding your own features — the auth side
+is already built either way.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+You'll want working knowledge of SQL and [Drizzle
+ORM](https://orm.drizzle.team/docs/overview). Your tables go in
+`lib/db/schema.ts`, reads live in Server Components via `lib/server/*`, and
+writes are server actions in `actions/*`. Schema changes are generated and
+applied with `drizzle-kit`.
+
+</Tab>
+
+<Tab value="Convex">
+
+You'll want basic Convex knowledge — how to write queries and mutations, and how
+indexes work. The [Convex documentation](https://docs.convex.dev) is excellent
+for the basics. Your tables go in `convex/schema.ts` and your functions in
+`convex/`.
+
+</Tab>
+
+</Tabs>
 
 ### Do I need to know Better Auth?
 
 No. Authentication is already configured. You only need to understand Better Auth if you want to customize auth flows.
 
 ### What accounts do I need?
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+| Service | Required | Purpose |
+|---------|----------|---------|
+| A PostgreSQL database | Yes | Data storage — any provider |
+| Resend | Yes | Email sending |
+| Autumn | Optional | Billing (can be removed) |
+| Vercel | Recommended | Deployment |
+| Sentry | Optional | Error monitoring |
+
+</Tab>
+
+<Tab value="Convex">
 
 | Service | Required | Purpose |
 |---------|----------|---------|
@@ -74,9 +181,33 @@ No. Authentication is already configured. You only need to understand Better Aut
 | Vercel | Recommended | Deployment |
 | Sentry | Optional | Error monitoring |
 
+</Tab>
+
+</Tabs>
+
 ### Can I use a different database?
 
-Unstack Pro is built specifically for Convex. The template relies on Convex's real-time features, so switching databases would require significant modifications.
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Any PostgreSQL will do. The app connects with `pg` (node-postgres), not a
+vendor-specific driver, so Neon and Supabase are convenient suggestions rather
+than requirements — a Postgres you run yourself works the same. Moving to a
+different *engine* would mean swapping the Drizzle dialect and regenerating
+every migration.
+
+</Tab>
+
+<Tab value="Convex">
+
+This edition is built specifically for Convex and relies on its real-time
+features, so switching databases would require significant modifications. If you
+want SQL, use the Postgres edition instead.
+
+</Tab>
+
+</Tabs>
 
 ### Can I use a different email provider?
 
@@ -171,11 +302,30 @@ Only users with the `admin` role can access `/admin`.
 
 ### How do I create the first admin?
 
-1. Register a normal account
-2. Go to Convex dashboard
-3. Navigate to `betterAuth` → `users`
-4. Edit your user and set `role` to `admin`
-5. Refresh your browser
+Register a normal account first, then promote it by hand — there is no bootstrap
+flow, and no environment variable that grants the role.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Set the `role` column on your row in the `user` table, then refresh your
+browser:
+
+```sql
+update "user" set role = 'admin' where email = 'you@example.com';
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Open the Convex dashboard, go to the `user` table in the data browser, edit your
+row's `role` field to `admin`, then refresh your browser.
+
+</Tab>
+
+</Tabs>
 
 ### What can admins do?
 
@@ -225,18 +375,52 @@ Vercel is recommended and documented. Other platforms that support Next.js shoul
 - Railway
 - Self-hosted
 
-### Do I need separate Convex deployments for dev and production?
+### Do I need separate environments for dev and production?
 
-Yes. You should have:
+Yes, and never point production at your development data.
 
-- Development deployment (local development)
-- Production deployment (live site)
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
 
-Use different environment variables for each.
+<Tab value="Postgres">
+
+Two databases: your local `DATABASE_URL` and a separate production one. There is
+no second deployment environment to manage — Better Auth runs inside Next.js, so
+the only thing that changes between environments is the set of variables your
+host provides.
+
+</Tab>
+
+<Tab value="Convex">
+
+Two Convex deployments — a development one and a production one — each with its
+own environment variables. `bun convex dev` targets the former;
+`bunx convex deploy` and `--prod` target the latter.
+
+</Tab>
+
+</Tabs>
 
 ### How do I handle environment variables in production?
 
-Set them in your hosting platform's dashboard (e.g., Vercel Environment Variables) and in your Convex production environment.
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+One surface: your hosting platform's dashboard (for example Vercel Environment
+Variables). Everything the app reads — `DATABASE_URL`, `BETTER_AUTH_SECRET`,
+`RESEND_API_KEY` and the rest — lives there.
+
+</Tab>
+
+<Tab value="Convex">
+
+Two surfaces: your hosting platform's dashboard for the Next.js side, and the
+Convex production deployment for everything Better Auth reads, set with
+`bunx convex env set NAME "value" --prod`.
+
+</Tab>
+
+</Tabs>
 
 ### Do I need HTTPS?
 
@@ -260,12 +444,28 @@ Yes. Customize:
 
 ### Can I add my own features?
 
-Absolutely. Add new:
+Absolutely. Routes go in `app/` and components in `components/`, in both
+editions. Where the data side goes depends on yours:
 
-- Routes in `app/`
-- Components in `components/`
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- Database tables in `lib/db/schema.ts`, applied with `bun run db:generate` and
+  `bun run db:migrate`
+- Reads in `lib/server/`, called from Server Components
+- Writes as server actions in `actions/`
+
+</Tab>
+
+<Tab value="Convex">
+
 - Database tables in `convex/schema.ts`
-- API functions in `convex/`
+- Queries, mutations and actions in `convex/`
+
+</Tab>
+
+</Tabs>
 
 ### Can I modify the auth flow?
 
@@ -303,7 +503,26 @@ Yes. Unstack Pro implements security best practices:
 - Passwords are hashed (not stored in plain text)
 - TOTP secrets are encrypted
 - Sessions use secure tokens
-- Convex encrypts data at rest
+
+Encryption at rest is a property of where the data lives:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Your database provider's responsibility. Most managed Postgres services encrypt
+at rest by default; check yours, and use `sslmode=require` so the connection is
+encrypted in transit too.
+
+</Tab>
+
+<Tab value="Convex">
+
+Convex encrypts data at rest for you.
+
+</Tab>
+
+</Tabs>
 
 ### How are sessions managed?
 
@@ -319,10 +538,29 @@ Basic rate limiting is in place. For production, consider adding additional rate
 
 Most common causes:
 
-1. `BETTER_AUTH_SECRET` mismatch between `.env.local` and Convex
-2. `BETTER_AUTH_URL` doesn't match your actual URL
-3. Convex isn't running (`bun convex dev`)
-4. Cookies blocked by browser
+1. `NEXT_PUBLIC_APP_URL` doesn't match the URL you're actually on
+2. Cookies blocked by the browser, or missing HTTPS in production
+3. `BETTER_AUTH_SECRET` changed, invalidating every existing session
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+4. `DATABASE_URL` is unset or unreachable
+5. Pending migrations in `drizzle/` were never applied, so an auth table or
+   column the code expects doesn't exist
+
+</Tab>
+
+<Tab value="Convex">
+
+4. Convex isn't running (`bun convex dev`)
+5. `BETTER_AUTH_SECRET` or `JWKS` is missing on the Convex deployment, or `JWKS`
+   was not regenerated after `BETTER_AUTH_SECRET` changed
+
+</Tab>
+
+</Tabs>
 
 ### Emails aren't sending
 
@@ -335,11 +573,30 @@ Check:
 
 ### Database connection fails
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Verify:
+
+1. `DATABASE_URL` is set in `.env.local` and reachable from where you're running
+2. The connection string carries `?sslmode=require` if your provider needs it
+3. The provider's connection limit isn't exhausted
+
+</Tab>
+
+<Tab value="Convex">
+
 Verify:
 
 1. Convex is running (`bun convex dev`)
-2. All three Convex URLs are correct
-3. Deployment exists in Convex dashboard
+2. `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL` and
+   `NEXT_PUBLIC_CONVEX_SITE_URL` all name the same deployment
+3. The deployment exists in the Convex dashboard
+
+</Tab>
+
+</Tabs>
 
 See the full [Troubleshooting Guide](/troubleshooting) for more solutions.
 
@@ -351,10 +608,26 @@ See the full [Troubleshooting Guide](/troubleshooting) for more solutions.
 2. Review the [Troubleshooting Guide](/troubleshooting)
 3. Search the codebase for examples
 4. Check library documentation:
-   - [Convex Docs](https://docs.convex.dev)
-   - [better-convex Docs](https://better-convex.com/docs) - Our Better Auth + Convex integration
    - [Better Auth Docs](https://www.better-auth.com/docs)
    - [Next.js Docs](https://nextjs.org/docs)
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview)
+- [drizzle-kit migrations](https://orm.drizzle.team/docs/kit-overview)
+
+</Tab>
+
+<Tab value="Convex">
+
+- [Convex Docs](https://docs.convex.dev)
+- [kitcn](https://kitcn.dev) — the Better Auth + Convex integration
+
+</Tab>
+
+</Tabs>
 
 ### Can I request features?
 
@@ -374,9 +647,26 @@ Report bugs with:
 
 ### Will I get updates?
 
-Yes. On purchase you're invited to the template repository
-(`unstack-pro/nextjs-convex`), so your own git credentials can fetch it. You pull
-ongoing fixes and features into your project with a single command.
+Yes. On purchase you're invited to the template repository, so your own git
+credentials can fetch it. You pull ongoing fixes and features into your project
+with a single command.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The Postgres-edition template repository is not published yet; the Convex edition
+is the one distributed today.
+
+</Tab>
+
+<Tab value="Convex">
+
+The repository is `unstack-pro/nextjs-convex`.
+
+</Tab>
+
+</Tabs>
 
 ### How do I update?
 
