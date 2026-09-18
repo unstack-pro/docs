@@ -15,6 +15,30 @@ Unstack Pro is a complete Next.js template with authentication, organizations, a
 Save 100-200+ hours of development time. Everything from email/password to passkeys to organizations is already configured.
 </Callout>
 
+Unstack Pro ships in **two editions** of the same product. The **Postgres
+edition** — PostgreSQL through Drizzle ORM — is the reference edition. The
+**Convex edition** is the original, and the one distributed today. Pick yours
+with the switcher below; the choice is remembered across every page in these
+docs.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Better Auth runs inside Next.js and talks to PostgreSQL through Drizzle ORM.
+One environment surface, one dev process, SQL migrations.
+
+</Tab>
+
+<Tab value="Convex">
+
+Better Auth runs inside Convex. Two environment surfaces, two dev processes, and
+schema pushed rather than migrated.
+
+</Tab>
+
+</Tabs>
+
 ## What's Already Built
 
 ### 🔐 Authentication (Complete)
@@ -64,13 +88,35 @@ Enterprise-grade security built in:
 ### 🎨 Tech Stack
 Built with modern, scalable technologies:
 - **Framework**: Next.js 16 + React 19 with App Router
-- **Auth**: Better Auth v1.4 via [better-convex](https://better-convex.com) (fully configured with 10+ plugins)
-- **UI Components**: 50+ components (HeroUI + ShadCN/ui)
+- **Auth**: Better Auth 1.7 with the organization, admin, two-factor, passkey and email-OTP plugins, plus a custom re-authentication plugin
+- **UI Components**: 50+ components (ShadCN/ui on Radix primitives)
 - **Forms**: React Hook Form (optimized for minimal re-renders)
-- **Styling**: Tailwind CSS with dark mode
+- **Styling**: Tailwind CSS v4 with dark mode
 - **Email**: Resend with React Email templates
 - **Billing**: Autumn integration (per-seat pricing)
 - **Monitoring**: Sentry ready (optional)
+
+The data layer is the part that differs between editions:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- **Database**: PostgreSQL through Drizzle ORM, connected with `pg` (node-postgres) — any provider works
+- **Auth runtime**: Better Auth runs natively inside Next.js on `drizzleAdapter`
+- **Data access**: Server Components read through `lib/server/*`; writes are server actions in `actions/*`
+
+</Tab>
+
+<Tab value="Convex">
+
+- **Database**: Convex, with reactive live queries in the client
+- **Auth runtime**: Better Auth runs inside Convex via [kitcn](https://kitcn.dev)
+- **Data access**: queries, mutations and actions in `convex/`
+
+</Tab>
+
+</Tabs>
 
 ## Quick Links
 
@@ -113,7 +159,7 @@ Built with modern, scalable technologies:
   <Card 
     title="Database Schema" 
     href="/database-schema"
-    description="Convex data models"
+    description="How your data is modelled"
   />
   <Card 
     title="Customization" 
@@ -156,8 +202,26 @@ Not a tutorial or boilerplate - this is battle-tested, production-quality code y
 ### Best Practices Built In
 Security, scalability, and performance best practices are already implemented. No need to research "how to do auth right."
 
-### Real-Time Everything
-Convex gives you real-time updates across your entire app without any extra configuration.
+### The Data Layer Is Already Wired Up
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The Drizzle schema, its generated SQL migrations, and typed server-side queries
+are all in place. Pages read through `lib/server/*` and write through server
+actions — there is no client data-fetching layer to assemble.
+
+</Tab>
+
+<Tab value="Convex">
+
+Convex gives you real-time updates across your entire app without any extra
+configuration — a `useQuery` re-renders on its own as the data behind it changes.
+
+</Tab>
+
+</Tabs>
 
 ## Getting Started is Simple
 

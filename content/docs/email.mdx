@@ -52,19 +52,34 @@ Unstack Pro includes a complete email system:
 
 ### Configure Environment Variables
 
-Add your Resend credentials to Convex:
+`RESEND_API_KEY` and `EMAIL_FROM` belong wherever the code that sends the mail
+runs:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Sending happens in ordinary Next.js server code, so both go in `.env.local`:
+
+```dotenv title=".env.local"
+RESEND_API_KEY="re_your_api_key_here"
+EMAIL_FROM="Your App <no-reply@yourdomain.com>"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Sending happens on the Convex backend, so both belong on the Convex deployment:
 
 ```bash
 bunx convex env set RESEND_API_KEY "re_your_api_key_here"
 bunx convex env set EMAIL_FROM "Your App <no-reply@yourdomain.com>"
 ```
 
-Also add to your `.env.local` for local development reference:
+</Tab>
 
-```dotenv
-RESEND_API_KEY="re_your_api_key_here"
-EMAIL_FROM="Your App <no-reply@yourdomain.com>"
-```
+</Tabs>
 
 </Step>
 
@@ -97,9 +112,11 @@ emails/
 ├── verification-email.tsx          # Email verification OTP
 ├── reset-password-email.tsx        # Password reset OTP
 ├── signin-otp-email.tsx            # OTP sign-in code
+├── reauth-otp-email.tsx            # Re-authentication OTP
+├── password-changed-email.tsx      # Password change notice
 ├── organization-invitation-email.tsx  # Organization invitations
-├── email-change-verification.tsx   # Email change verification
-└── delete-account-verification.tsx # Account deletion confirmation
+├── delete-account-verification.tsx # Account deletion confirmation
+└── index.ts                        # Barrel the send layer imports from
 ```
 
 ### Available Templates
@@ -109,8 +126,9 @@ emails/
 | `verification-email` | Verify new user's email | After registration, and when a user changes their email (a 6-digit code is sent to the new address) |
 | `reset-password-email` | Password reset code | When user requests password reset |
 | `signin-otp-email` | OTP sign-in code | When user chooses OTP login |
+| `reauth-otp-email` | Re-authentication code | When a sensitive action asks the user to prove who they are |
+| `password-changed-email` | Password change notice | After a password is changed or reset |
 | `organization-invitation-email` | Invite to organization | When member is invited |
-| `email-change-verification` | Verify new email address | Unused by default — kept as an example; email changes use the OTP flow via `verification-email` |
 | `delete-account-verification` | Confirm account deletion | When user initiates deletion |
 
 ## Customizing Email Templates
@@ -238,26 +256,86 @@ import { Img } from "@react-email/components";
 
 ## Email Sending Logic
 
-Emails are sent from Convex functions. The integration is already configured in the Better Auth setup:
+One `sendEmail` helper renders a React Email template to HTML and hands it to
+Resend, and the Better Auth config calls it from every auth flow. Where that
+helper runs is the one real architectural difference between the editions.
 
-```typescript title="convex/betterAuth/email.ts"
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`lib/email.ts` — ordinary Next.js server code, called straight from the Better
+Auth config in `lib/auth.ts`.
+
+```typescript title="lib/email.ts"
+import { render } from "@react-email/components";
 import { Resend } from "resend";
-import VerificationEmail from "@/emails/verification-email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export async function sendEmail<T extends EmailTemplate>(params: {
+  from: string;
+  to: string;
+  subject: string;
+  template: T;
+  props: TemplateProps[T];
+}) {
+  const html = await render(TEMPLATES[params.template](params.props));
+  const resend = new Resend(process.env.RESEND_API_KEY!);
 
-export async function sendVerificationEmail(
-  email: string,
-  otp: string
-) {
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM,
-    to: email,
-    subject: "Verify your email",
-    react: VerificationEmail({ otp, appName: "Your App" }),
+  const response = await resend.emails.send({
+    from: params.from,
+    to: params.to,
+    subject: params.subject,
+    html,
   });
+
+  if (response.error) {
+    throw new Error(`Failed to send email: ${response.error.message}`);
+  }
 }
 ```
+
+</Tab>
+
+<Tab value="Convex">
+
+`convex/email.ts` — a `"use node"` internal action on the Convex backend, which
+the Better Auth config in `convex/betterAuth/auth.ts` schedules. Template props
+cross the boundary as a JSON string, because Convex validators cannot describe a
+React component's props.
+
+```typescript title="convex/email.ts"
+"use node";
+
+import { render } from "@react-email/components";
+import { v } from "convex/values";
+import { Resend } from "resend";
+import { internalAction } from "./_generated/server";
+
+export const sendEmail = internalAction({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    subject: v.string(),
+    template: v.union(/* one literal per template */),
+    props: v.string(),
+  },
+  handler: async (_, args) => {
+    const html = await render(TEMPLATES[args.template](JSON.parse(args.props)));
+    const resend = new Resend(process.env.RESEND_API_KEY!);
+
+    await resend.emails.send({
+      from: args.from,
+      to: args.to,
+      subject: args.subject,
+      html,
+    });
+  },
+});
+```
+
+</Tab>
+
+</Tabs>
 
 ## Email Deliverability
 
@@ -318,15 +396,33 @@ export default function WelcomeEmail({ name, appName }: WelcomeEmailProps) {
 // ... styles
 ```
 
-2. **Create sending function** in your Convex backend
-3. **Call the function** from your application logic
+2. **Register it** — export it from `emails/index.ts` and add it to the template
+   map in the send layer (see [Email Sending Logic](#email-sending-logic))
+3. **Call `sendEmail`** with the new template name from your application logic
 
 ## Environment Variables Summary
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
 | Variable | Required | Where | Description |
 |----------|----------|-------|-------------|
-| `RESEND_API_KEY` | Yes | Convex | Your Resend API key |
-| `EMAIL_FROM` | Yes | Convex | Sender address (e.g., `App <no-reply@domain.com>`) |
+| `RESEND_API_KEY` | Yes | `.env.local` | Your Resend API key |
+| `EMAIL_FROM` | Yes | `.env.local` | Sender address (e.g., `App <no-reply@domain.com>`) |
+
+</Tab>
+
+<Tab value="Convex">
+
+| Variable | Required | Where | Description |
+|----------|----------|-------|-------------|
+| `RESEND_API_KEY` | Yes | Convex deployment | Your Resend API key |
+| `EMAIL_FROM` | Yes | Convex deployment | Sender address (e.g., `App <no-reply@domain.com>`) |
+
+</Tab>
+
+</Tabs>
 
 ## Resources
 

@@ -24,9 +24,30 @@ Admins are typically set:
 - By existing admins
 - Through direct database access (first admin)
 
-<Callout type="info">
-To create the first admin, sign up normally, then update your user role to `admin` in the database on the Convex dashboard. Select betterAuth and then the users table to edit your role.
-</Callout>
+To create the first admin, sign up normally, then promote your own account by
+hand — there is no bootstrap flow and no environment variable that grants the
+role.
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Set the `role` column on your row in the `user` table, then refresh your browser:
+
+```sql
+update "user" set role = 'admin' where email = 'you@example.com';
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Open the Convex dashboard, go to the `user` table in the data browser, edit your
+row's `role` field to `admin`, then refresh your browser.
+
+</Tab>
+
+</Tabs>
 
 ## Admin Dashboard
 
@@ -48,9 +69,23 @@ Three key metrics displayed in cards:
 - Count of currently restricted accounts
 - Helps track moderation actions
 
-<Callout type="info">
-Statistics update in real-time using Convex's live queries.
-</Callout>
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The admin page is a Server Component. It reads the three counts through
+`lib/server/admin.ts` on each request, so they are as fresh as the render.
+
+</Tab>
+
+<Tab value="Convex">
+
+Statistics update in real time through Convex's live queries — the cards
+re-render as accounts are created, banned, or promoted.
+
+</Tab>
+
+</Tabs>
 
 ## User Management
 

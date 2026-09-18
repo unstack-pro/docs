@@ -70,53 +70,41 @@ export function Logo() {
 Unstack Pro uses Tailwind CSS v4 with CSS variables for theming. Customize colors in `/styles/globals.css`:
 
 ```css title="styles/globals.css"
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
-  }
+@import "tailwindcss";
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-  }
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    color-scheme: light;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --primary: oklch(0.546 0.245 262.881);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --border: oklch(0.922 0 0);
+    --ring: oklch(0.546 0.245 262.881);
+    --radius: 0.625rem;
+}
+
+.dark {
+    color-scheme: dark;
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --primary: oklch(0.623 0.214 259.815);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --border: oklch(0.269 0 0);
+    --ring: oklch(0.623 0.214 259.815);
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-primary: var(--primary);
 }
 ```
+
+Every token is declared on `:root`, overridden in `.dark`, and exposed to Tailwind
+through the `@theme inline` block at the bottom of the file. Change a value in
+both blocks and the rest of the UI follows.
 
 ### Fonts
 
@@ -146,12 +134,9 @@ Better Auth supports many OAuth providers. To add one:
 
 ### Configure the Provider
 
-Add a `socialProviders` block to `createAuthOptions` in
-`convex/betterAuth/auth.ts` — this is the source of truth for auth config (Better
-Auth runs *inside* Convex):
+Add a `socialProviders` block to the Better Auth options:
 
-```typescript title="convex/betterAuth/auth.ts"
-// inside createAuthOptions(...)
+```typescript
 socialProviders: {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -164,10 +149,26 @@ socialProviders: {
 },
 ```
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The options are the `betterAuth({ … })` call in `lib/auth.ts`, which runs inside
+Next.js on `drizzleAdapter`.
+
+</Tab>
+
+<Tab value="Convex">
+
+The options are `createAuthOptions` in `convex/betterAuth/auth.ts` — Better Auth
+runs *inside* Convex, so that file is the source of truth.
+
+</Tab>
+
+</Tabs>
+
 <Callout type="info">
 No social providers are configured out of the box — the stack is OAuth-*ready*.
-Because these env vars are read in the Convex runtime, set them with
-`bunx convex env set` (see below).
 </Callout>
 
 </Step>
@@ -176,24 +177,36 @@ Because these env vars are read in the Convex runtime, set them with
 
 ### Add Environment Variables
 
-Add OAuth credentials to your environment:
+The credentials go wherever the auth options are evaluated:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
 
 ```dotenv title=".env.local"
-# Google OAuth
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# GitHub OAuth
 GITHUB_CLIENT_ID="your-github-client-id"
 GITHUB_CLIENT_SECRET="your-github-client-secret"
 ```
 
-Don't forget to also set these in Convex:
+</Tab>
+
+<Tab value="Convex">
+
+These are read in the Convex runtime, so they belong on the Convex deployment
+rather than in `.env.local`:
 
 ```bash
 bunx convex env set GOOGLE_CLIENT_ID "your-google-client-id"
 bunx convex env set GOOGLE_CLIENT_SECRET "your-google-client-secret"
+bunx convex env set GITHUB_CLIENT_ID "your-github-client-id"
+bunx convex env set GITHUB_CLIENT_SECRET "your-github-client-secret"
 ```
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
@@ -417,14 +430,25 @@ If you don't need passkey authentication:
 
 1. Remove passkey routes in `/app/account/security/passkeys/`
 2. Remove passkey components
-3. Disable passkey plugin in Better Auth config:
+3. Drop `passkey()` from the `plugins` array in the Better Auth config, and stop
+   setting `PASSKEY_RP_ID`
 
-```typescript title="lib/auth-server.ts"
-export const auth = betterAuth({
-  // Remove or comment out passkey plugin
-  // plugins: [passkey()],
-});
-```
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+The `plugins` array is in `lib/auth.ts`, and `PASSKEY_RP_ID` is in `.env.local`.
+
+</Tab>
+
+<Tab value="Convex">
+
+The `plugins` array is in `convex/betterAuth/auth.ts`, and `PASSKEY_RP_ID` lives
+on the Convex deployment (`bunx convex env remove PASSKEY_RP_ID`).
+
+</Tab>
+
+</Tabs>
 
 ## Adding New Components
 
@@ -470,9 +494,67 @@ bunx shadcn@latest add calendar
 bunx shadcn@latest add command
 ```
 
-## Custom Hooks
+## Reading and Writing Your Own Data
 
-Add custom hooks in `/lib/hooks/`:
+Routes live in `app/` and components in `components/` either way. How a page gets
+its data is the part that differs, and it shapes every feature you add:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+There are no live queries. A Server Component reads through a function in
+`lib/server/`, a write is a server action in `actions/`, and the client calls
+`router.refresh()` afterwards to pull a fresh render.
+
+```typescript title="lib/server/projects.ts"
+import "server-only";
+
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { project } from "@/lib/db/schema";
+import { requireSession } from "@/lib/session";
+
+export async function listProjects(organizationId: string) {
+  await requireSession();
+
+  return db
+    .select()
+    .from(project)
+    .where(eq(project.organizationId, organizationId));
+}
+```
+
+```tsx title="app/organizations/[organizationSlug]/projects/_components/new-project.tsx"
+"use client";
+
+import { useRouter } from "next/navigation";
+import { createProject } from "@/actions/projects";
+
+export function NewProject({ organizationId }: { organizationId: string }) {
+  const router = useRouter();
+
+  return (
+    <button
+      onClick={async () => {
+        await createProject({ organizationId });
+        router.refresh();
+      }}
+      type="button"
+    >
+      New project
+    </button>
+  );
+}
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Queries are reactive. A `useQuery` in a client component re-renders on its own
+whenever the data behind it changes, so a mutation needs no follow-up refresh.
+Custom hooks go in `lib/hooks/`:
 
 ```typescript title="lib/hooks/use-organization.ts"
 "use client";
@@ -491,6 +573,10 @@ export function useOrganization(slug: string) {
   };
 }
 ```
+
+</Tab>
+
+</Tabs>
 
 ## Environment-Specific Configuration
 
@@ -542,10 +628,31 @@ launch-style demo video — a bonus you can use or delete.
 # One-time setup
 bun run demo:install-browsers    # Playwright Chromium
 cd video && bun install && cd .. # the Remotion project has its own deps
+```
 
-# With `bun convex dev` and `bun dev` running:
+Then render, with the app already running:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+```bash
+# with `bun dev` running
 DEMO_EMAIL=you@example.com DEMO_PASSWORD=your-password bun run demo:render
 ```
+
+</Tab>
+
+<Tab value="Convex">
+
+```bash
+# with `bun convex dev` and `bun dev` both running
+DEMO_EMAIL=you@example.com DEMO_PASSWORD=your-password bun run demo:render
+```
+
+</Tab>
+
+</Tabs>
 
 - **`bun run demo:capture`** — Playwright drives the app and captures real screens
   into `video/public/demo` (see the header comment in `scripts/capture-demo.ts` for
@@ -574,11 +681,27 @@ README's "Scripted Demo Video" section for details.
 ## Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
-- [Convex Documentation](https://docs.convex.dev)
-- [better-convex Documentation](https://better-convex.com/docs) - Our Better Auth + Convex integration
 - [Better Auth Documentation](https://www.better-auth.com/docs)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [Shadcn UI Documentation](https://ui.shadcn.com)
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview)
+- [drizzle-kit migrations](https://orm.drizzle.team/docs/kit-overview)
+
+</Tab>
+
+<Tab value="Convex">
+
+- [Convex Docs](https://docs.convex.dev)
+- [kitcn](https://kitcn.dev) — the Better Auth + Convex integration
+
+</Tab>
+
+</Tabs>
 
 ## Next Steps
 

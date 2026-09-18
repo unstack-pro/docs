@@ -72,11 +72,28 @@ Organizations cannot add members until they are on the Pro plan.
 
 ### Configure Environment Variables
 
-Set `AUTUMN_SECRET_KEY` in **both** environments — the Next.js billing routes read
-it at runtime, and the Convex auth hooks read it too:
+`AUTUMN_SECRET_KEY` is the only variable billing needs. How many places it goes
+depends on your edition:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+One place. The billing routes and the Better Auth organization hooks both run
+inside Next.js, so both read it from `.env.local`:
+
+```dotenv title=".env.local"
+AUTUMN_SECRET_KEY="am_sk_your_api_key_here"
+```
+
+</Tab>
+
+<Tab value="Convex">
+
+Two places. The Next.js billing routes read it from `.env.local`; the auth hooks
+run on the Convex deployment and read it there:
 
 ```bash
-# Convex deployment
 bunx convex env set AUTUMN_SECRET_KEY "am_sk_your_api_key_here"
 ```
 
@@ -85,10 +102,14 @@ AUTUMN_SECRET_KEY="am_sk_your_api_key_here"
 ```
 
 <Callout type="error">
-Setting `AUTUMN_SECRET_KEY` in only one environment breaks billing: the checkout /
-portal routes 500 in the Next.js runtime, or seat syncing fails in the Convex
-hooks. Set it in both.
+Setting it in only one of the two breaks billing: the checkout / portal routes
+500 in the Next.js runtime, or seat syncing fails in the Convex hooks. Set it in
+both.
 </Callout>
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
@@ -181,23 +202,45 @@ endpoint. The key pieces:
 
 - **`autumn.config.ts`** — the `free_plan` / `pro` product definitions, pushed with
   `bunx atmn push`.
-- **`convex/betterAuth/auth.ts`** — `organizationHooks` call into the billing
-  integration:
-  - `afterCreateOrganization` initialises the Autumn customer for the org.
-  - `afterAcceptInvitation` / `afterRemoveMember` sync the seat count.
-  - `beforeCreateInvitation` / `beforeAddMember` / `beforeAcceptInvitation` gate on
-    a paid plan and throw `APIError("BAD_REQUEST", …)` if the org lacks one.
-- **`lib/autumn-server.ts`** — an SDK-free REST client used from the Convex runtime
-  (the `autumn-js` SDK is too large for Convex's 64 MB isolate).
-- **`lib/autumn.ts`** — the full `autumn-js` SDK, usable from Node server pages.
 - **`app/api/autumn/[...all]/route.ts`** — the Next.js billing route (checkout,
   portal); it reads `AUTUMN_SECRET_KEY` at runtime in the Node runtime and is gated
   to org owners/admins.
 
+The `organizationHooks` do the same work either way:
+
+- `afterCreateOrganization` initialises the Autumn customer for the org.
+- `afterAcceptInvitation` / `afterRemoveMember` sync the seat count.
+- `beforeCreateInvitation` / `beforeAddMember` / `beforeAcceptInvitation` gate on
+  a paid plan and throw `APIError("BAD_REQUEST", …)` if the org lacks one.
+
+What differs is which file carries them, and which Autumn client they call:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+- **`lib/auth.ts`** — the Better Auth config, `organizationHooks` included.
+- **`lib/autumn.ts`** — the `autumn-js` SDK, imported directly by those hooks.
+
+</Tab>
+
+<Tab value="Convex">
+
+- **`convex/betterAuth/auth.ts`** — the Better Auth config, `organizationHooks`
+  included.
+- **`lib/autumn-server.ts`** — an SDK-free REST client the hooks import from the
+  Convex runtime (the `autumn-js` SDK is too large for Convex's 64 MB isolate).
+- **`lib/autumn.ts`** — the full `autumn-js` SDK, usable from Node server pages.
+
+</Tab>
+
+</Tabs>
+
 <Callout type="info">
 Subscriptions are organization-scoped and billing is keyed per URL organization
 via the `x-organization-slug` header. If you add a flow that grows seat count or
-invites members, hook it into `organizationHooks` in `convex/betterAuth/auth.ts`.
+invites members, hook it into `organizationHooks` in the auth config file listed
+above for your edition.
 </Callout>
 
 ## Billing Route
@@ -216,7 +259,25 @@ If you don't need billing:
 
 ### Remove Environment Variable
 
-Remove `AUTUMN_SECRET_KEY` from both the Convex deployment and `.env.local`.
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Remove `AUTUMN_SECRET_KEY` from `.env.local`.
+
+</Tab>
+
+<Tab value="Convex">
+
+Remove `AUTUMN_SECRET_KEY` from `.env.local` **and** from the Convex deployment:
+
+```bash
+bunx convex env remove AUTUMN_SECRET_KEY
+```
+
+</Tab>
+
+</Tabs>
 
 </Step>
 
@@ -236,21 +297,11 @@ app/organizations/[organizationSlug]/billing/
 
 ### Update Organization Logic
 
-Modify member addition to not check for Pro plan:
-
-```typescript
-// Remove the plan check in add member logic
-export async function addMember(organizationId: string, userId: string) {
-  // Skip: const canAdd = await canAddMembers(organizationId);
-  
-  await db.insert("members", {
-    organizationId,
-    userId,
-    role: "member",
-    createdAt: Date.now(),
-  });
-}
-```
+In the auth config file for your edition, delete the plan gate from the
+`beforeCreateInvitation`, `beforeAddMember` and `beforeAcceptInvitation`
+organization hooks, and drop the `afterCreateOrganization`,
+`afterAcceptInvitation` and `afterRemoveMember` calls into the Autumn client.
+Members can then be added regardless of plan.
 
 </Step>
 
@@ -272,9 +323,10 @@ Remove billing-related components and references from:
 ### Subscription Not Updating
 
 **Check:**
-- Autumn API key is correct
-- Webhook endpoint is configured
-- Organization ID matches Autumn customer ID
+- `AUTUMN_SECRET_KEY` is correct, and set everywhere your edition needs it
+- `bunx atmn push` has run, so `free_plan` and `pro` exist in your Autumn account
+- The organization id matches the Autumn customer id — the org id *is* the
+  customer id
 
 ### Payment Failed
 

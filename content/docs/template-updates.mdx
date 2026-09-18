@@ -13,9 +13,23 @@ single local command.
 
 ## How Updates Reach You
 
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+Template syncing is not available for this edition yet.
+
+</Tab>
+
+<Tab value="Convex">
+
 Updates live in the template repository **`unstack-pro/nextjs-convex`**, which is a
 private mirror of the product. On purchase you're **invited to that repository**, so
 your own git credentials can fetch it. There's nothing to configure in GitHub.
+
+</Tab>
+
+</Tabs>
 
 <Callout type="info">
 There is **no GitHub Actions workflow** and no automatic/weekly sync. The one and
@@ -39,7 +53,7 @@ Run without flags, it will:
 <Step>
 ### Add and fetch the template remote
 
-Adds `unstack-pro/nextjs-convex` as a `template` remote (one-time) and fetches it.
+Adds the template repository as a `template` remote (one-time) and fetches it.
 </Step>
 
 <Step>
@@ -124,9 +138,30 @@ Decide per conflict whether to keep your version, take the template's, or merge
 both. Common cases:
 
 - **`package.json`** — accept template dependency bumps, keep your added deps.
-- **`convex/*`, `lib/auth-client.ts`** — template changes here are usually
-  improvements; accept unless you've customized them.
+- **`lib/auth-client.ts`** — template changes here are usually improvements;
+  accept unless you've customized it.
 - **`app/*`, `components/*`** — if you've customized heavily, review carefully.
+
+The data and auth layer is where the two editions diverge:
+
+<Tabs groupId="edition" persist items={["Postgres", "Convex"]}>
+
+<Tab value="Postgres">
+
+`lib/auth.ts`, `lib/db/*` and `actions/*` — accept unless you've customized them.
+A new file under `drizzle/` is a migration and is purely additive: take it, then
+run `bun run db:migrate`.
+
+</Tab>
+
+<Tab value="Convex">
+
+`convex/*` — accept unless you've customized it. Schema changes are pushed by
+`bun convex dev`, so there is no migration file to apply afterwards.
+
+</Tab>
+
+</Tabs>
 </Step>
 
 <Step>
